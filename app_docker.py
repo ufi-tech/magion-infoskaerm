@@ -86,6 +86,10 @@ class Screen(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+    # Redirect settings (per screen)
+    redirect_enabled = db.Column(db.Boolean, default=False)
+    redirect_url = db.Column(db.Text)
+
     # Relationship to media
     media_items = db.relationship('Media', secondary=screen_media, backref='screens')
 
@@ -506,6 +510,11 @@ def display_screen(screen_uuid):
     """Display screen by UUID - shows screen-specific content"""
     screen = Screen.query.filter_by(uuid=str(screen_uuid)).first_or_404()
 
+    # Check if redirect is enabled for this screen
+    if screen.redirect_enabled and screen.redirect_url:
+        logger.info(f"Screen {screen.name} redirect active - redirecting to: {screen.redirect_url}")
+        return redirect(screen.redirect_url)
+
     if not screen.active:
         return render_template('display.html',
                              media_list=json.dumps([]),
@@ -548,6 +557,98 @@ def pair_screen():
         })
     else:
         return jsonify({'success': False, 'error': 'Ugyldig pairing kode'}), 404
+
+@app.route('/screen/<int:screen_id>/upload', methods=['POST'])
+@login_required
+def upload_screen_media(screen_id):
+    """Upload media directly to a specific screen"""
+    screen = Screen.query.get_or_404(screen_id)
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'Ingen fil valgt'}), 400
+
+    files = request.files.getlist('file')
+    uploaded_count = 0
+
+    for file in files:
+        if file and allowed_file(file.filename):
+            original_filename = file.filename
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = secure_filename(f"{timestamp}_{original_filename}")
+
+            upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(upload_path)
+
+            ext = filename.rsplit('.', 1)[1].lower()
+            is_video = ext in ['mp4', 'avi', 'mov', 'webm']
+            media_type = 'video' if is_video else 'image'
+
+            optimized_filename = f"opt_{filename}"
+            if is_video:
+                optimized_filename = optimized_filename.rsplit('.', 1)[0] + '.mp4'
+            else:
+                optimized_filename = optimized_filename.rsplit('.', 1)[0] + '.jpg'
+
+            optimized_path = os.path.join(app.config['OPTIMIZED_FOLDER'], optimized_filename)
+
+            if is_video:
+                duration = optimize_video(upload_path, optimized_path)
+            else:
+                optimize_image(upload_path, optimized_path)
+                duration = 5000
+
+            # Create media as NON-global (screen-specific)
+            media = Media(
+                filename=optimized_filename,
+                original_filename=original_filename,
+                media_type=media_type,
+                duration=duration,
+                uploaded_by=current_user.id,
+                order_index=Media.query.count(),
+                is_global=False  # Screen-specific media
+            )
+            db.session.add(media)
+            db.session.flush()  # Get media.id
+
+            # Assign to screen
+            screen.media_items.append(media)
+            uploaded_count += 1
+
+    db.session.commit()
+    return jsonify({'success': True, 'count': uploaded_count})
+
+@app.route('/screen/<int:screen_id>/settings', methods=['POST'])
+@login_required
+def update_screen_settings(screen_id):
+    """Update screen settings including redirect"""
+    screen = Screen.query.get_or_404(screen_id)
+
+    data = request.json if request.is_json else request.form
+
+    if 'name' in data:
+        screen.name = data['name']
+    if 'location' in data:
+        screen.location = data['location']
+    if 'description' in data:
+        screen.description = data['description']
+
+    # Handle redirect settings
+    if request.is_json:
+        screen.redirect_enabled = data.get('redirect_enabled', False)
+    else:
+        # Form submission - checkbox
+        screen.redirect_enabled = 'redirect_enabled' in data
+
+    if 'redirect_url' in data:
+        screen.redirect_url = data['redirect_url']
+
+    db.session.commit()
+
+    if request.is_json:
+        return jsonify({'success': True})
+    else:
+        flash('Skærm indstillinger opdateret', 'success')
+        return redirect(url_for('dashboard'))
 
 def init_db():
     """Initialize database with default admin user"""

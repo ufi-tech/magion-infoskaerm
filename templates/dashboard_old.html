@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Efterskolen Play{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 30px;
+    }
+    
+    .upload-section {
+        background: #f7fafc;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .upload-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    
+    .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: -9999px;
+    }
+    
+    .file-input-label {
+        background: white;
+        border: 2px dashed #cbd5e0;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .file-input-label:hover {
+        border-color: #667eea;
+        background: #f0f5ff;
+    }
+    
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    
+    .media-card {
+        background: #f7fafc;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.3s;
+    }
+    
+    .media-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .media-card.inactive {
+        opacity: 0.5;
+    }
+    
+    .media-preview {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        background: #e2e8f0;
+    }
+    
+    .media-info {
+        padding: 10px;
+    }
+    
+    .media-title {
+        font-size: 12px;
+        color: #2d3748;
+        margin-bottom: 5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .media-controls {
+        display: flex;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    
+    .media-controls button {
+        flex: 1;
+        padding: 5px;
+        font-size: 12px;
+    }
+    
+    .settings-panel {
+        background: #f7fafc;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    .settings-panel h3 {
+        margin-bottom: 20px;
+        color: #2d3748;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #4a5568;
+        font-size: 14px;
+    }
+    
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+    }
+    
+    .duration-input {
+        width: 80px;
+        padding: 4px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .stats-box {
+        background: #f0f5ff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .stats-box h4 {
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+    
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+    
+    .btn-small {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    
+    .toggle-switch {
+        position: relative;
+        width: 50px;
+        height: 24px;
+        background: #cbd5e0;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    
+    .toggle-switch.active {
+        background: #48bb78;
+    }
+    
+    .toggle-switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.3s;
+    }
+    
+    .toggle-switch.active::after {
+        transform: translateX(26px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="main-content">
+        <!-- SCREEN MANAGEMENT SECTION -->
+        <div class="upload-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: white; margin: 0;">📺 Skærmstyring</h2>
+                <button onclick="openCreateScreenModal()" class="btn" style="background: white; color: #667eea;">+ Opret Ny Skærm</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                {% for screen in screens %}
+                <div class="screen-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <h3 style="margin: 0 0 5px 0; color: white;">{{ screen.name }}</h3>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.9;">{{ screen.location or 'Ingen lokation' }}</p>
+                        </div>
+                        <div class="toggle-switch {% if screen.active %}active{% endif %}" onclick="toggleScreen({{ screen.id }}, this)" style="margin: 0;"></div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 10px 0; font-family: monospace; font-size: 11px;">
+                        <div style="opacity: 0.8;">Pairing kode:</div>
+                        <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">{{ screen.pairing_code }}</div>
+                    </div>
+
+                    <div style="display: flex; gap: 5px; margin-top: 10px;">
+                        <button onclick="showQRCode({{ screen.id }})" class="btn btn-small" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">📱 QR</button>
+                        <button onclick="copyScreenURL('{{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}')" class="btn btn-small" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">🔗 Kopi URL</button>
+                        <button onclick="assignMedia({{ screen.id }})" class="btn btn-small" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">📁 Media</button>
+                    </div>
+
+                    <div style="margin-top: 8px; text-align: center;">
+                        <a href="{{ url_for('display_screen', screen_uuid=screen.uuid) }}" target="_blank" style="color: white; text-decoration: none; font-size: 12px; opacity: 0.8;">🔗 {{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}</a>
+                    </div>
+                </div>
+                {% else %}
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; opacity: 0.8;">
+                    <p style="margin: 0; font-size: 16px;">Ingen skærme oprettet endnu</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px;">Klik på "Opret Ny Skærm" for at komme i gang</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <h2>Upload nye filer</h2>
+            <form method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data" class="upload-form">
+                <div class="file-input-wrapper">
+                    <input type="file" id="file" name="file" multiple accept="image/*,video/*">
+                    <label for="file" class="file-input-label">Vælg filer...</label>
+                </div>
+                <button type="submit" class="btn">Upload</button>
+            </form>
+            <p style="margin-top: 10px; font-size: 12px; color: #718096;">
+                Tilladt: JPG, PNG, GIF, MP4, MOV, AVI (Maks 500MB)
+            </p>
+        </div>
+        
+        <h2 style="margin-bottom: 20px;">Mediefiler ({{ media_files|length }} filer)</h2>
+        
+        <div class="media-grid" id="mediaGrid">
+            {% for media in media_files %}
+            <div class="media-card {% if not media.active %}inactive{% endif %}" data-id="{{ media.id }}">
+                {% if media.media_type == 'image' %}
+                    <img src="/media/{{ media.filename }}" alt="{{ media.original_filename }}" class="media-preview">
+                {% else %}
+                    <video src="/media/{{ media.filename }}" class="media-preview"></video>
+                {% endif %}
+                
+                <div class="media-info">
+                    <div class="media-title">{{ media.original_filename }}</div>
+                    <div style="font-size: 11px; color: #718096;">
+                        {{ media.media_type|title }} - 
+                        Varighed: <input type="number" class="duration-input" value="{{ media.duration }}" onchange="updateDuration({{ media.id }}, this.value)"> ms
+                    </div>
+                    
+                    <div class="media-controls">
+                        <div class="toggle-switch {% if media.active %}active{% endif %}" onclick="toggleMedia({{ media.id }}, this)"></div>
+                        <button onclick="deleteMedia({{ media.id }})" class="btn btn-danger btn-small">Slet</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="sidebar">
+        <div class="stats-box">
+            <h4>Statistik</h4>
+            <div class="stat-row">
+                <span>Totalt antal filer:</span>
+                <span>{{ media_files|length }}</span>
+            </div>
+            <div class="stat-row">
+                <span>Aktive filer:</span>
+                <span>{{ media_files|selectattr('active')|list|length }}</span>
+            </div>
+            <div class="stat-row">
+                <span>Billeder:</span>
+                <span>{{ media_files|selectattr('media_type', 'equalto', 'image')|list|length }}</span>
+            </div>
+            <div class="stat-row">
+                <span>Videoer:</span>
+                <span>{{ media_files|selectattr('media_type', 'equalto', 'video')|list|length }}</span>
+            </div>
+        </div>
+        
+        <div class="settings-panel" style="border: 3px solid #667eea; margin-bottom: 20px;">
+            <h3 style="color: #667eea;">🔗 URL Redirect Override</h3>
+
+            <!-- Status Badge -->
+            <div style="display: inline-block; padding: 8px 16px; border-radius: 20px; margin-bottom: 15px;
+                        background: {% if settings.get('redirect_enabled') == 'True' %}#48bb78{% else %}#cbd5e0{% endif %};
+                        color: white; font-weight: bold; font-size: 14px;">
+                {% if settings.get('redirect_enabled') == 'True' %}
+                    ✓ REDIRECT AKTIV
+                {% else %}
+                    ○ REDIRECT INAKTIV
+                {% endif %}
+            </div>
+
+            <form method="POST" action="{{ url_for('update_settings') }}">
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox"
+                               name="redirect_enabled"
+                               value="True"
+                               style="width: 20px; height: 20px; cursor: pointer;"
+                               {% if settings.get('redirect_enabled') == 'True' %}checked{% endif %}>
+                        <span style="font-size: 15px; font-weight: bold;">Aktiver Redirect</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="redirect_url">Destination URL</label>
+                    <input type="url"
+                           id="redirect_url"
+                           name="redirect_url"
+                           placeholder="https://efterskolenplay.viggo.dk/Screen/1/"
+                           value="{{ settings.get('redirect_url', 'https://efterskolenplay.viggo.dk/Screen/1/') }}"
+                           style="font-family: monospace; font-size: 13px;">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; background: #667eea; font-weight: bold;">
+                    💾 Gem Redirect Indstillinger
+                </button>
+            </form>
+
+            <!-- Info Box -->
+            <div style="margin-top: 15px; padding: 12px; background: #f0f5ff; border-left: 4px solid #667eea; border-radius: 4px;">
+                <strong style="color: #667eea;">ℹ️ Sådan virker det:</strong>
+                <ul style="margin: 10px 0 0 20px; font-size: 13px; color: #4a5568; line-height: 1.6;">
+                    <li>Når aktiveret redirecter TV'erne til den angivne URL</li>
+                    <li>Jeres normale media rotation pauses automatisk</li>
+                    <li>Slå redirect fra for at vende tilbage til jeres media</li>
+                    <li>TV'erne opdaterer automatisk ved næste side-load</li>
+                </ul>
+            </div>
+
+            {% if settings.get('redirect_enabled') == 'True' %}
+            <div style="margin-top: 10px; padding: 12px; background: #d4edda; border-left: 4px solid #48bb78; border-radius: 4px;">
+                <strong style="color: #28a745;">✅ Redirect er AKTIV</strong><br>
+                <small style="color: #155724; word-break: break-all;">
+                    Infoskærmen redirecter til:<br>
+                    <code style="background: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">{{ settings.get('redirect_url', 'Ingen URL sat') }}</code>
+                </small>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="settings-panel">
+            <h3>Indstillinger</h3>
+            <form method="POST" action="{{ url_for('update_settings') }}">
+                <div class="form-group">
+                    <label for="site_title">Titel</label>
+                    <input type="text" id="site_title" name="site_title" value="{{ settings.get('site_title', 'Efterskolen Play') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="default_image_duration">Standard billedvarighed (ms)</label>
+                    <input type="number" id="default_image_duration" name="default_image_duration"
+                           value="{{ settings.get('default_image_duration', '5000') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="transition_effect">Overgangseffekt</label>
+                    <select id="transition_effect" name="transition_effect">
+                        <option value="fade" {% if settings.get('transition_effect') == 'fade' %}selected{% endif %}>Fade</option>
+                        <option value="slide" {% if settings.get('transition_effect') == 'slide' %}selected{% endif %}>Slide</option>
+                        <option value="none" {% if settings.get('transition_effect') == 'none' %}selected{% endif %}>Ingen</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="auto_refresh">Auto-genindlæs (ms)</label>
+                    <input type="number" id="auto_refresh" name="auto_refresh"
+                           value="{{ settings.get('auto_refresh', '21600000') }}">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">Gem indstillinger</button>
+            </form>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('display') }}" target="_blank" class="btn" style="width: 100%; text-align: center;">
+                Åbn infoskærm
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Modals -->
+<div id="createScreenModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+        <h2 style="margin-top: 0;">Opret Ny Skærm</h2>
+        <form method="POST" action="{{ url_for('create_screen') }}">
+            <div class="form-group">
+                <label>Navn *</label>
+                <input type="text" name="name" required placeholder="fx. Reception Skærm">
+            </div>
+            <div class="form-group">
+                <label>Lokation</label>
+                <input type="text" name="location" placeholder="fx. Hovedindgang">
+            </div>
+            <div class="form-group">
+                <label>Beskrivelse</label>
+                <textarea name="description" rows="3" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn" style="flex: 1; background: #667eea;">Opret Skærm</button>
+                <button type="button" onclick="closeCreateScreenModal()" class="btn" style="flex: 1; background: #cbd5e0; color: #2d3748;">Annuller</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="qrModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; text-align: center;">
+        <h2 style="margin-top: 0;">Skærm QR Kode</h2>
+        <div id="qrCodeContainer"></div>
+        <p id="screenURL" style="word-break: break-all; font-size: 12px; color: #718096; margin: 15px 0;"></p>
+        <button onclick="closeQRModal()" class="btn" style="width: 100%;">Luk</button>
+    </div>
+</div>
+
+<div id="mediaAssignModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <h2 style="margin-top: 0;">Tildel Media til Skærm</h2>
+        <div id="mediaSelectionList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 20px 0;">
+            {% for media in media_files %}
+            <div class="media-select-item" data-id="{{ media.id }}" style="border: 2px solid #cbd5e0; border-radius: 8px; padding: 10px; cursor: pointer; text-align: center;" onclick="toggleMediaSelection(this)">
+                {% if media.media_type == 'image' %}
+                    <img src="/media/{{ media.filename }}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;">
+                {% else %}
+                    <video src="/media/{{ media.filename }}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;"></video>
+                {% endif %}
+                <p style="margin: 5px 0 0 0; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ media.original_filename }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button onclick="saveMediaAssignment()" class="btn" style="flex: 1; background: #667eea;">Gem</button>
+            <button onclick="closeMediaAssignModal()" class="btn" style="flex: 1; background: #cbd5e0; color: #2d3748;">Annuller</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentScreenIdForMedia = null;
+
+function openCreateScreenModal() {
+    document.getElementById('createScreenModal').style.display = 'flex';
+}
+
+function closeCreateScreenModal() {
+    document.getElementById('createScreenModal').style.display = 'none';
+}
+
+function toggleScreen(screenId, element) {
+    fetch(`/screen/${screenId}/toggle`)
+        .then(response => response.json())
+        .then(data => {
+            element.classList.toggle('active', data.active);
+        });
+}
+
+function showQRCode(screenId) {
+    fetch(`/screen/${screenId}/qr`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('qrCodeContainer').innerHTML = `<img src="${data.qr_code}" style="max-width: 100%;">`;
+            document.getElementById('screenURL').textContent = data.url;
+            document.getElementById('qrModal').style.display = 'flex';
+        });
+}
+
+function closeQRModal() {
+    document.getElementById('qrModal').style.display = 'none';
+}
+
+function copyScreenURL(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        alert('URL kopieret til udklipsholder!');
+    });
+}
+
+function assignMedia(screenId) {
+    currentScreenIdForMedia = screenId;
+    // Reset selections
+    document.querySelectorAll('.media-select-item').forEach(item => {
+        item.style.borderColor = '#cbd5e0';
+        item.style.background = 'white';
+    });
+    document.getElementById('mediaAssignModal').style.display = 'flex';
+}
+
+function closeMediaAssignModal() {
+    document.getElementById('mediaAssignModal').style.display = 'none';
+    currentScreenIdForMedia = null;
+}
+
+function toggleMediaSelection(element) {
+    if (element.style.borderColor === 'rgb(102, 126, 234)') {
+        element.style.borderColor = '#cbd5e0';
+        element.style.background = 'white';
+    } else {
+        element.style.borderColor = '#667eea';
+        element.style.background = '#f0f5ff';
+    }
+}
+
+function saveMediaAssignment() {
+    if (!currentScreenIdForMedia) return;
+
+    const selectedMedia = Array.from(document.querySelectorAll('.media-select-item'))
+        .filter(item => item.style.borderColor === 'rgb(102, 126, 234)')
+        .map(item => parseInt(item.dataset.id));
+
+    fetch(`/screen/${currentScreenIdForMedia}/assign-media`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({media_ids: selectedMedia})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Media tildelt succesfuldt!');
+            closeMediaAssignModal();
+        }
+    });
+}
+
+// Sortable grid
+let draggedElement = null;
+
+document.getElementById('mediaGrid').addEventListener('dragstart', function(e) {
+    if (e.target.classList.contains('media-card')) {
+        draggedElement = e.target;
+        e.target.style.opacity = '0.5';
+    }
+});
+
+document.getElementById('mediaGrid').addEventListener('dragend', function(e) {
+    if (e.target.classList.contains('media-card')) {
+        e.target.style.opacity = '';
+    }
+});
+
+document.getElementById('mediaGrid').addEventListener('dragover', function(e) {
+    e.preventDefault();
+});
+
+document.getElementById('mediaGrid').addEventListener('drop', function(e) {
+    e.preventDefault();
+    if (draggedElement && e.target.classList.contains('media-card')) {
+        const grid = document.getElementById('mediaGrid');
+        const allCards = Array.from(grid.querySelectorAll('.media-card'));
+        const draggedIndex = allCards.indexOf(draggedElement);
+        const targetIndex = allCards.indexOf(e.target);
+        
+        if (draggedIndex < targetIndex) {
+            grid.insertBefore(draggedElement, e.target.nextSibling);
+        } else {
+            grid.insertBefore(draggedElement, e.target);
+        }
+        
+        // Send ny rækkefølge til serveren
+        const newOrder = Array.from(grid.querySelectorAll('.media-card')).map(card => card.dataset.id);
+        fetch('/reorder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({order: newOrder})
+        });
+    }
+});
+
+// Toggle media aktiv/inaktiv
+function toggleMedia(id, element) {
+    fetch(`/toggle/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            element.classList.toggle('active', data.active);
+            element.closest('.media-card').classList.toggle('inactive', !data.active);
+        });
+}
+
+// Slet media
+function deleteMedia(id) {
+    if (confirm('Er du sikker på at du vil slette denne fil?')) {
+        window.location.href = `/delete/${id}`;
+    }
+}
+
+// Opdater varighed
+function updateDuration(id, duration) {
+    fetch(`/update_duration/${id}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({duration: parseInt(duration)})
+    });
+}
+
+// Vis filnavne når filer vælges
+document.getElementById('file').addEventListener('change', function(e) {
+    const label = document.querySelector('.file-input-label');
+    const fileCount = e.target.files.length;
+    if (fileCount > 0) {
+        label.textContent = `${fileCount} fil(er) valgt`;
+    } else {
+        label.textContent = 'Vælg filer...';
+    }
+});
+
+// Gør media cards draggable
+document.querySelectorAll('.media-card').forEach(card => {
+    card.draggable = true;
+});
+</script>
+{% endblock %}
