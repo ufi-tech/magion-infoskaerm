@@ -13,69 +13,70 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #ffffff;
             min-height: 100vh;
-            padding: 30px;
+            padding: 20px;
             overflow-x: hidden;
         }
 
         .header {
             text-align: center;
-            color: white;
+            color: #000000;
             margin-bottom: 30px;
+            padding: 20px;
+            background: #ffffff;
+            border-bottom: 4px solid #FF6B35;
             animation: fadeIn 0.8s;
         }
 
         .header h1 {
             font-size: 48px;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            color: #000000;
+            font-weight: 700;
         }
 
         .header .date {
-            font-size: 28px;
-            opacity: 0.9;
+            font-size: 24px;
+            color: #FF6B35;
+            font-weight: 600;
+        }
+
+        .header .time {
+            font-size: 20px;
+            color: #666666;
+            margin-top: 8px;
         }
 
         .activities-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            max-width: 1600px;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 16px;
+            max-width: 1800px;
             margin: 0 auto;
         }
 
         .activity-card {
             background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s, box-shadow 0.3s;
-            animation: slideIn 0.6s ease-out;
+            border: 2px solid #e0e0e0;
+            border-left: 6px solid #FF6B35;
+            padding: 20px;
+            transition: all 0.3s;
+            animation: slideIn 0.5s ease-out;
             position: relative;
-            overflow: hidden;
         }
 
         .activity-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        }
-
-        .activity-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 6px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-color: #FF6B35;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
+            transform: translateX(4px);
         }
 
         .activity-time {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
-            color: #667eea;
-            margin-bottom: 12px;
+            color: #FF6B35;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -84,62 +85,90 @@
         .activity-title {
             font-size: 18px;
             font-weight: 600;
-            color: #2d3748;
+            color: #000000;
             margin-bottom: 8px;
-            line-height: 1.4;
+            line-height: 1.3;
         }
 
         .activity-location {
             font-size: 14px;
-            color: #718096;
+            color: #666666;
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        .activity-area {
+            font-size: 13px;
+            color: #999999;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
         }
 
         .activity-user {
             font-size: 13px;
-            color: #a0aec0;
+            color: #999999;
             font-style: italic;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f0f0f0;
         }
 
         .current-activity {
-            border: 3px solid #48bb78;
-            box-shadow: 0 0 20px rgba(72, 187, 120, 0.4);
+            border-color: #00C853;
+            border-left-width: 8px;
+            background: #f0fff4;
+            box-shadow: 0 0 20px rgba(0, 200, 83, 0.15);
         }
 
-        .current-activity::before {
-            background: #48bb78;
+        .current-activity .activity-time {
+            color: #00C853;
         }
 
         .current-badge {
             position: absolute;
             top: 16px;
             right: 16px;
-            background: #48bb78;
+            background: #00C853;
             color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
             animation: pulse 2s infinite;
+            letter-spacing: 0.5px;
         }
 
         .no-activities {
             text-align: center;
-            color: white;
+            color: #666666;
             font-size: 24px;
-            padding: 60px 20px;
+            padding: 80px 20px;
             grid-column: 1 / -1;
         }
 
         .loading {
             text-align: center;
-            color: white;
+            color: #FF6B35;
             font-size: 32px;
             padding: 100px 20px;
+            font-weight: 600;
+        }
+
+        .error {
+            text-align: center;
+            color: #d32f2f;
+            font-size: 18px;
+            padding: 60px 20px;
+            grid-column: 1 / -1;
+            background: #ffebee;
+            border: 2px solid #d32f2f;
+            border-radius: 8px;
+            margin: 20px;
         }
 
         @keyframes fadeIn {
@@ -156,7 +185,7 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateX(-30px);
+                transform: translateX(-20px);
             }
             to {
                 opacity: 1;
@@ -167,39 +196,30 @@
         @keyframes pulse {
             0%, 100% {
                 opacity: 1;
+                transform: scale(1);
             }
             50% {
-                opacity: 0.7;
+                opacity: 0.8;
+                transform: scale(1.05);
             }
         }
 
-        .scroll-container {
-            animation: autoScroll 120s linear infinite;
-        }
-
-        @keyframes autoScroll {
-            0% {
-                transform: translateY(0);
+        /* Media query for smaller screens */
+        @media (max-width: 768px) {
+            .activities-container {
+                grid-template-columns: 1fr;
             }
-            50% {
-                transform: translateY(-30%);
-            }
-            100% {
-                transform: translateY(0);
+            .header h1 {
+                font-size: 32px;
             }
         }
-
-        /* Color variations for different locations */
-        .activity-card[data-location*="bassin"] .activity-time { color: #3182ce; }
-        .activity-card[data-location*="Fitness"] .activity-time { color: #e53e3e; }
-        .activity-card[data-location*="Arena"] .activity-time { color: #805ad5; }
-        .activity-card[data-location*="Sal"] .activity-time { color: #38a169; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1 id="headerTitle">📅 Dagens Aktiviteter</h1>
+        <h1>📅 Dagens Aktiviteter</h1>
         <div class="date" id="currentDate"></div>
+        <div class="time" id="currentTime"></div>
     </div>
 
     <div class="activities-container" id="activitiesContainer">
@@ -207,83 +227,122 @@
     </div>
 
     <script>
-        const jsonData = {{ json_data|safe }};
+        let rawJsonData = {{ json_data|safe }};
         const template = '{{ json_template }}';
+
+        console.log('📦 Raw JSON data:', rawJsonData);
 
         function displayActivities() {
             const container = document.getElementById('activitiesContainer');
             const now = new Date();
             const currentTime = now.getHours() * 60 + now.getMinutes();
 
+            // Parse JSON - handle both direct array and object with 'infoskaerm' key
+            let jsonData = [];
+            if (Array.isArray(rawJsonData)) {
+                jsonData = rawJsonData;
+            } else if (rawJsonData && rawJsonData.infoskaerm) {
+                jsonData = rawJsonData.infoskaerm;
+            } else if (typeof rawJsonData === 'object') {
+                // Try to find the first array in the object
+                const keys = Object.keys(rawJsonData);
+                for (let key of keys) {
+                    if (Array.isArray(rawJsonData[key])) {
+                        jsonData = rawJsonData[key];
+                        break;
+                    }
+                }
+            }
+
+            console.log('✅ Parsed activities:', jsonData.length);
+
             if (!jsonData || jsonData.length === 0) {
-                container.innerHTML = '<div class="no-activities">📭 Ingen aktiviteter i dag</div>';
+                container.innerHTML = '<div class="no-activities">📭 Ingen aktiviteter planlagt i dag</div>';
                 return;
             }
 
             container.innerHTML = '';
 
-            // Extract date if available
+            // Extract and display date
             let displayDate = 'I dag';
-            if (jsonData.length > 0 && jsonData[0].Dato) {
-                displayDate = jsonData[0].Dato;
+            if (jsonData.length > 0) {
+                displayDate = jsonData[0].dato || jsonData[0].Dato || 'I dag';
             }
             document.getElementById('currentDate').textContent = displayDate;
+
+            // Sort by time
+            jsonData.sort((a, b) => {
+                const timeA = a.fratid || a.FraTid || '';
+                const timeB = b.fratid || b.FraTid || '';
+                return timeA.localeCompare(timeB);
+            });
 
             jsonData.forEach((activity, index) => {
                 const card = document.createElement('div');
                 card.className = 'activity-card';
-                card.style.animationDelay = `${index * 0.1}s`;
+                card.style.animationDelay = `${(index % 20) * 0.05}s`;
 
-                // Parse time
-                const fromTime = activity.FraTid || '';
-                const toTime = activity.TilTid || '';
+                // Parse time (handle both lowercase and uppercase field names)
+                const fromTime = activity.fratid || activity.FraTid || '';
+                const toTime = activity.tiltid || activity.TilTid || '';
 
-                // Check if activity is current
+                // Check if activity is currently happening
                 let isCurrent = false;
                 if (fromTime && toTime) {
-                    const [fromHour, fromMin] = fromTime.split(':').map(Number);
-                    const [toHour, toMin] = toTime.split(':').map(Number);
-                    const fromMinutes = fromHour * 60 + fromMin;
-                    const toMinutes = toHour * 60 + toMin;
+                    try {
+                        const [fromHour, fromMin] = fromTime.split(':').map(Number);
+                        const [toHour, toMin] = toTime.split(':').map(Number);
+                        const fromMinutes = fromHour * 60 + fromMin;
+                        const toMinutes = toHour * 60 + toMin;
 
-                    if (currentTime >= fromMinutes && currentTime < toMinutes) {
-                        isCurrent = true;
-                        card.classList.add('current-activity');
+                        if (currentTime >= fromMinutes && currentTime < toMinutes) {
+                            isCurrent = true;
+                            card.classList.add('current-activity');
+                        }
+                    } catch (e) {
+                        console.error('Time parse error:', e);
                     }
-                }
-
-                // Set data attribute for color coding
-                if (activity.Område) {
-                    card.setAttribute('data-location', activity.Område);
                 }
 
                 let cardHTML = '';
 
                 if (isCurrent) {
-                    cardHTML += '<div class="current-badge">🔴 Nu</div>';
+                    cardHTML += '<div class="current-badge">⚡ NU</div>';
                 }
 
                 cardHTML += `
                     <div class="activity-time">
-                        ⏰ ${fromTime} - ${toTime}
+                        🕐 ${fromTime} - ${toTime}
                     </div>
                     <div class="activity-title">
-                        ${activity.Titel || 'Aktivitet'}
+                        ${activity.titel || activity.Titel || 'Aktivitet'}
                     </div>
                 `;
 
-                if (activity.Område) {
+                const location = activity.sted || activity.Sted || '';
+                const area = activity.omraade || activity.Område || '';
+                const user = activity.brugernavn || activity.Bruger || '';
+
+                if (location) {
                     cardHTML += `
                         <div class="activity-location">
-                            📍 ${activity.Område}
+                            📍 ${location}
                         </div>
                     `;
                 }
 
-                if (activity.Bruger) {
+                if (area) {
+                    cardHTML += `
+                        <div class="activity-area">
+                            🏢 ${area}
+                        </div>
+                    `;
+                }
+
+                if (user) {
                     cardHTML += `
                         <div class="activity-user">
-                            ${activity.Bruger}
+                            ${user}
                         </div>
                     `;
                 }
@@ -291,34 +350,50 @@
                 card.innerHTML = cardHTML;
                 container.appendChild(card);
             });
+
+            console.log('✅ Displayed', jsonData.length, 'activities');
         }
-
-        // Initial display
-        displayActivities();
-
-        // Refresh data every 5 minutes
-        setInterval(() => {
-            console.log('🔄 Refreshing activity data...');
-            window.location.reload();
-        }, 5 * 60 * 1000);
-
-        // Update current time indicator every minute
-        setInterval(() => {
-            displayActivities();
-        }, 60 * 1000);
 
         // Display current time
         function updateClock() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('da-DK', {
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                second: '2-digit'
             });
-            document.getElementById('headerTitle').textContent = `📅 Dagens Aktiviteter - ${timeStr}`;
+            const elem = document.getElementById('currentTime');
+            if (elem) {
+                elem.textContent = `🕐 ${timeStr}`;
+            }
         }
 
-        updateClock();
-        setInterval(updateClock, 1000);
+        // Error handling
+        try {
+            displayActivities();
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Update current time indicator every minute
+            setInterval(() => {
+                displayActivities();
+            }, 60 * 1000);
+
+            // Refresh data every 5 minutes
+            setInterval(() => {
+                console.log('🔄 Refreshing activity data...');
+                window.location.reload();
+            }, 5 * 60 * 1000);
+
+        } catch (error) {
+            console.error('❌ Error displaying activities:', error);
+            document.getElementById('activitiesContainer').innerHTML = `
+                <div class="error">
+                    ⚠️ Kunne ikke vise aktiviteter<br>
+                    <small>${error.message}</small>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
