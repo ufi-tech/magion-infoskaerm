@@ -990,11 +990,9 @@
                 `;
 
                 const location = activity.sted || activity.Sted || '';
-                const area = activity.omraade || activity.Område || '';
                 const user = activity.brugernavn || activity.Bruger || '';
 
                 if (location) cardHTML += `<div class="activity-location">📍 ${location}</div>`;
-                if (area) cardHTML += `<div class="activity-area">🏢 ${area}</div>`;
                 if (user) cardHTML += `<div class="activity-user">${user}</div>`;
 
                 card.innerHTML = cardHTML;
@@ -1028,7 +1026,6 @@
                         <th>Tid</th>
                         <th>Arrangement</th>
                         <th>Sted</th>
-                        <th>Område</th>
                         <th>Bruger</th>
                     </tr>
                 </thead>
@@ -1040,7 +1037,6 @@
                 const toTime = activity.tiltid || activity.TilTid || '';
                 const title = activity.titel || activity.Titel || 'Aktivitet';
                 const location = activity.sted || activity.Sted || '';
-                const area = activity.omraade || activity.Område || '';
                 const user = activity.brugernavn || activity.Bruger || '';
 
                 const isCurrent = isActivityCurrent(fromTime, toTime, currentTime);
@@ -1051,7 +1047,6 @@
                         <td class="time-cell">${fromTime} - ${toTime}</td>
                         <td class="title-cell">${title}</td>
                         <td>${location}</td>
-                        <td>${area}</td>
                         <td>${user}</td>
                     </tr>
                 `;
@@ -1069,7 +1064,6 @@
                 const toTime = activity.tiltid || activity.TilTid || '';
                 const title = activity.titel || activity.Titel || 'Aktivitet';
                 const location = activity.sted || activity.Sted || '';
-                const area = activity.omraade || activity.Område || '';
                 const user = activity.brugernavn || activity.Bruger || '';
 
                 const isCurrent = isActivityCurrent(fromTime, toTime, currentTime);
@@ -1080,7 +1074,6 @@
 
                 let detailsHTML = '';
                 if (location) detailsHTML += `<div class="timeline-detail">📍 ${location}</div>`;
-                if (area) detailsHTML += `<div class="timeline-detail">🏢 ${area}</div>`;
                 if (user) detailsHTML += `<div class="timeline-detail">👤 ${user}</div>`;
 
                 item.innerHTML = `
