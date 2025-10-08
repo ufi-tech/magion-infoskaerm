@@ -111,6 +111,8 @@ class Screen(db.Model):
     # Display mode settings (per screen)
     display_mode = db.Column(db.String(20), default='media')  # 'media', 'redirect', 'iframe', 'json_api'
     iframe_url = db.Column(db.Text)
+    iframe_margin_left = db.Column(db.Integer, default=0)  # Left margin in pixels
+    iframe_margin_right = db.Column(db.Integer, default=0)  # Right margin in pixels
     json_api_url = db.Column(db.Text)
     json_template = db.Column(db.String(50), default='schedule')  # 'schedule', 'custom'
 
@@ -707,6 +709,8 @@ def display_screen(screen_uuid):
         logger.info(f"Screen {screen.name} iframe mode - showing: {screen.iframe_url}")
         return render_template('display_iframe.html',
                              iframe_url=screen.iframe_url,
+                             iframe_margin_left=screen.iframe_margin_left or 0,
+                             iframe_margin_right=screen.iframe_margin_right or 0,
                              screen_name=screen.name,
                              screen_uuid=str(screen_uuid))
 
@@ -876,6 +880,18 @@ def update_screen_settings(screen_id):
 
     if 'iframe_url' in data:
         screen.iframe_url = data['iframe_url']
+
+    if 'iframe_margin_left' in data:
+        try:
+            screen.iframe_margin_left = int(data['iframe_margin_left'])
+        except (ValueError, TypeError):
+            screen.iframe_margin_left = 0
+
+    if 'iframe_margin_right' in data:
+        try:
+            screen.iframe_margin_right = int(data['iframe_margin_right'])
+        except (ValueError, TypeError):
+            screen.iframe_margin_right = 0
 
     if 'json_api_url' in data:
         screen.json_api_url = data['json_api_url']
@@ -1058,6 +1074,14 @@ def init_db():
                 if 'iframe_url' not in screen_columns:
                     conn.execute(text("ALTER TABLE screen ADD COLUMN iframe_url TEXT"))
                     logger.info("Added iframe_url column to screen table")
+
+                if 'iframe_margin_left' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN iframe_margin_left INTEGER DEFAULT 0"))
+                    logger.info("Added iframe_margin_left column to screen table")
+
+                if 'iframe_margin_right' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN iframe_margin_right INTEGER DEFAULT 0"))
+                    logger.info("Added iframe_margin_right column to screen table")
 
                 if 'json_api_url' not in screen_columns:
                     conn.execute(text("ALTER TABLE screen ADD COLUMN json_api_url TEXT"))

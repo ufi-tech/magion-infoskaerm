@@ -18,6 +18,14 @@
             background: #000;
         }
 
+        .iframe-container {
+            width: 100%;
+            height: 100%;
+            margin-left: {{ iframe_margin_left }}px;
+            margin-right: {{ iframe_margin_right }}px;
+            width: calc(100% - {{ iframe_margin_left }}px - {{ iframe_margin_right }}px);
+        }
+
         iframe {
             width: 100%;
             height: 100%;
@@ -34,6 +42,7 @@
             font-family: Arial, sans-serif;
             font-size: 24px;
             text-align: center;
+            z-index: 10;
         }
 
         .error {
@@ -82,24 +91,33 @@
 <body>
     <div class="loading" id="loading">🔄 Indlæser...</div>
 
-    <iframe
-        id="contentFrame"
-        src="{{ iframe_url }}"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"
-        allow="autoplay; fullscreen"
-        loading="eager"
-        onload="onFrameLoad()"
-        onerror="onFrameError()">
-    </iframe>
+    <div class="iframe-container">
+        <iframe
+            id="contentFrame"
+            src="{{ iframe_url }}"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"
+            allow="autoplay; fullscreen"
+            loading="eager"
+            onload="onFrameLoad()"
+            onerror="onFrameError()">
+        </iframe>
+    </div>
 
     <div class="screen-info">
         🖼️ {{ screen_name }}
+        {% if iframe_margin_left > 0 or iframe_margin_right > 0 %}
+        | ← {{ iframe_margin_left }}px | {{ iframe_margin_right }}px →
+        {% endif %}
     </div>
 
     <script>
+        let reloadAttempts = 0;
+        const MAX_RELOAD_ATTEMPTS = 3;
+
         function onFrameLoad() {
             console.log('✅ iFrame loaded successfully');
             document.getElementById('loading').style.display = 'none';
+            reloadAttempts = 0; // Reset counter on successful load
 
             // Show screen info briefly
             const info = document.querySelector('.screen-info');
@@ -119,12 +137,39 @@
             `;
         }
 
-        // Auto-reload iframe every 24 hours to ensure fresh content
-        setInterval(() => {
-            console.log('🔄 Auto-refreshing iframe...');
+        // Smooth reload function that doesn't cause full page flash
+        function smoothReloadIframe() {
             const iframe = document.getElementById('contentFrame');
-            iframe.src = iframe.src;
-        }, 24 * 60 * 60 * 1000);
+            try {
+                // Try to reload iframe content without flashing
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.location.reload();
+                    console.log('🔄 Smooth iframe reload (contentWindow)');
+                } else {
+                    // Fallback: reload iframe src
+                    const currentSrc = iframe.src;
+                    iframe.src = '';
+                    setTimeout(() => {
+                        iframe.src = currentSrc;
+                    }, 100);
+                    console.log('🔄 Iframe reload (src change)');
+                }
+                reloadAttempts++;
+            } catch (error) {
+                console.log('⚠️ Cross-origin reload blocked, iframe will self-manage:', error.message);
+                // If cross-origin, the iframe will manage its own updates
+            }
+        }
+
+        // Auto-refresh iframe every 6 hours (instead of 24) to keep content fresh
+        // This uses smooth reload to avoid flashing
+        setInterval(() => {
+            if (reloadAttempts < MAX_RELOAD_ATTEMPTS) {
+                smoothReloadIframe();
+            } else {
+                console.log('⏸️ Max reload attempts reached, letting iframe self-manage');
+            }
+        }, 6 * 60 * 60 * 1000);
 
         // Check for display mode changes every 30 seconds
         setInterval(() => {
@@ -138,6 +183,14 @@
                 })
                 .catch(error => console.log('Check failed:', error));
         }, 30000);
+
+        // Optional: Listen for visibility change to refresh when screen becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('👁️ Screen became visible');
+                // Don't auto-reload on visibility change to avoid disruption
+            }
+        });
     </script>
 </body>
 </html>

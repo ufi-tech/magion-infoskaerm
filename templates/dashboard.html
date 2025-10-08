@@ -655,10 +655,24 @@
                             </div>
 
                             <!-- iFrame URL field -->
-                            <div class="form-group mode-field mode-iframe{{ screen.id }}" style="display: none;">
-                                <label style="color: white;">🖼️ iFrame URL</label>
-                                <input type="url" name="iframe_url" value="{{ screen.iframe_url or '' }}" placeholder="https://example.com">
-                                <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vis ekstern hjemmeside i fuld skærm</div>
+                            <div class="mode-field mode-iframe{{ screen.id }}" style="display: none;">
+                                <div class="form-group">
+                                    <label style="color: white;">🖼️ iFrame URL</label>
+                                    <input type="url" name="iframe_url" value="{{ screen.iframe_url or '' }}" placeholder="https://example.com">
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vis ekstern hjemmeside i fuld skærm</div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div class="form-group">
+                                        <label style="color: white;">← Venstre Margin (px)</label>
+                                        <input type="number" name="iframe_margin_left" value="{{ screen.iframe_margin_left or 0 }}" min="0" max="1000" placeholder="0">
+                                        <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Skub indhold fra venstre</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="color: white;">Højre Margin (px) →</label>
+                                        <input type="number" name="iframe_margin_right" value="{{ screen.iframe_margin_right or 0 }}" min="0" max="1000" placeholder="0">
+                                        <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Skub indhold fra højre</div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- JSON API fields -->
