@@ -115,6 +115,8 @@ class Screen(db.Model):
     iframe_margin_right = db.Column(db.Integer, default=0)  # Right margin in pixels
     json_api_url = db.Column(db.Text)
     json_template = db.Column(db.String(50), default='schedule')  # 'schedule', 'custom'
+    sponsor_logo_path = db.Column(db.String(500))  # Path to sponsor logo image
+    magion_logo_path = db.Column(db.String(500))  # Path to MAGION logo image
 
     # Relationship to media through association object
     media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan')
@@ -535,6 +537,11 @@ def serve_media(filename):
     """Serve optimized media files"""
     return send_from_directory(app.config['OPTIMIZED_FOLDER'], filename)
 
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    """Serve uploaded files (e.g., sponsor logos)"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/api/media-list')
 def api_media_list():
     """API endpoint for media list"""
@@ -729,7 +736,9 @@ def display_screen(screen_uuid):
                              json_data=json.dumps(json_data),
                              json_template=screen.json_template or 'schedule',
                              screen_name=screen.name,
-                             screen_uuid=str(screen_uuid))
+                             screen_uuid=str(screen_uuid),
+                             sponsor_logo=screen.sponsor_logo_path,
+                             magion_logo=screen.magion_logo_path)
 
     # Default: media rotation mode
     if not screen.active:
@@ -898,6 +907,46 @@ def update_screen_settings(screen_id):
 
     if 'json_template' in data:
         screen.json_template = data['json_template']
+
+    # Handle sponsor logo upload
+    if 'sponsor_logo' in request.files:
+        file = request.files['sponsor_logo']
+        if file and file.filename:
+            # Create sponsors directory if it doesn't exist
+            sponsors_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'sponsors')
+            os.makedirs(sponsors_dir, exist_ok=True)
+
+            # Generate unique filename
+            filename = secure_filename(file.filename)
+            unique_filename = f"{screen.uuid}_sponsor_{filename}"
+            filepath = os.path.join(sponsors_dir, unique_filename)
+
+            # Save file
+            file.save(filepath)
+
+            # Update database with relative path
+            screen.sponsor_logo_path = f"/uploads/sponsors/{unique_filename}"
+            logger.info(f"Uploaded sponsor logo for screen {screen.name}: {screen.sponsor_logo_path}")
+
+    # Handle MAGION logo upload
+    if 'magion_logo' in request.files:
+        file = request.files['magion_logo']
+        if file and file.filename:
+            # Create logos directory if it doesn't exist
+            logos_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'logos')
+            os.makedirs(logos_dir, exist_ok=True)
+
+            # Generate unique filename
+            filename = secure_filename(file.filename)
+            unique_filename = f"{screen.uuid}_magion_{filename}"
+            filepath = os.path.join(logos_dir, unique_filename)
+
+            # Save file
+            file.save(filepath)
+
+            # Update database with relative path
+            screen.magion_logo_path = f"/uploads/logos/{unique_filename}"
+            logger.info(f"Uploaded MAGION logo for screen {screen.name}: {screen.magion_logo_path}")
 
     db.session.commit()
 
@@ -1090,6 +1139,14 @@ def init_db():
                 if 'json_template' not in screen_columns:
                     conn.execute(text("ALTER TABLE screen ADD COLUMN json_template VARCHAR(50) DEFAULT 'schedule'"))
                     logger.info("Added json_template column to screen table")
+
+                if 'sponsor_logo_path' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN sponsor_logo_path VARCHAR(500)"))
+                    logger.info("Added sponsor_logo_path column to screen table")
+
+                if 'magion_logo_path' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN magion_logo_path VARCHAR(500)"))
+                    logger.info("Added magion_logo_path column to screen table")
 
                 conn.commit()
         except Exception as e:

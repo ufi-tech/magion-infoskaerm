@@ -619,7 +619,7 @@
 
                     <div class="redirect-section">
                         <h3 style="color: white; margin: 0 0 15px 0;">🎯 Display Mode</h3>
-                        <form method="POST" action="{{ url_for('update_screen_settings', screen_id=screen.id) }}" id="displayModeForm{{ screen.id }}">
+                        <form method="POST" action="{{ url_for('update_screen_settings', screen_id=screen.id) }}" id="displayModeForm{{ screen.id }}" enctype="multipart/form-data">
                             {% set current_mode = screen.display_mode or 'media' %}
                             {% if screen.redirect_enabled and screen.redirect_url %}
                                 {% set current_mode = 'redirect' %}
@@ -691,6 +691,27 @@
                                         <option value="compact" {% if screen.json_template == 'compact' %}selected{% endif %}>📋 Kompakt Liste (minimal)</option>
                                     </select>
                                     <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vælg hvordan aktivitetsdata skal vises på skærmen</div>
+                                </div>
+                                <div class="form-group">
+                                    <label style="color: white;">🎨 MAGION Logo</label>
+                                    {% if screen.magion_logo_path %}
+                                    <div style="margin-bottom: 10px;">
+                                        <img src="{{ screen.magion_logo_path }}" alt="MAGION logo" style="max-width: 200px; max-height: 60px; background: #EF7D00; padding: 5px; border-radius: 4px;">
+                                    </div>
+                                    {% endif %}
+                                    <input type="file" name="magion_logo" accept="image/*" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload MAGION logo (hvid logo anbefalet). Lad tom for at bruge standard logo.</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="color: white;">🏢 Hovedsponsor Logo</label>
+                                    {% if screen.sponsor_logo_path %}
+                                    <div style="margin-bottom: 10px;">
+                                        <img src="{{ screen.sponsor_logo_path }}" alt="Sponsor logo" style="max-width: 200px; max-height: 60px; background: white; padding: 5px; border-radius: 4px;">
+                                    </div>
+                                    {% endif %}
+                                    <input type="file" name="sponsor_logo" accept="image/*" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload sponsor logo der vises centreret i header (anbefalet: hvid logo på transparent baggrund)</div>
                                 </div>
                             </div>
 
