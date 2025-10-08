@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Efterskolen Play - Admin{% endblock %}</title>
+    <title>{% block title %}{{ site_settings.get('site_title', 'Magion') }} - Admin{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -117,11 +117,16 @@
     <div class="container">
         {% if current_user.is_authenticated %}
         <div class="header">
-            <h1>Efterskolen Play - Administration</h1>
+            <h1>{{ site_settings.get('site_title', 'Magion') }} - Administration</h1>
             <div class="nav-links">
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('display') }}" target="_blank">Se Infoskærm</a>
-                <span>Hej, {{ current_user.username }}</span>
+                <a href="{{ url_for('dashboard') }}">📺 Dashboard</a>
+                {% if current_user.role == 'admin' or current_user.is_admin %}
+                <a href="{{ url_for('users') }}">👥 Brugere</a>
+                <a href="{{ url_for('login_history') }}">📊 Login Historik</a>
+                <a href="{{ url_for('settings_page') }}">⚙️ Indstillinger</a>
+                {% endif %}
+                <a href="{{ url_for('change_password') }}">🔐 Skift Password</a>
+                <span>Hej, {{ current_user.username }} {% if current_user.role == 'admin' or current_user.is_admin %}(Admin){% endif %}</span>
                 <a href="{{ url_for('logout') }}" class="btn btn-secondary">Log ud</a>
             </div>
         </div>

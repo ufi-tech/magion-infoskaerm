@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Bruger Administration{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .section h2 {
+        margin: 0 0 20px 0;
+        color: #2d3748;
+    }
+
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .user-table th {
+        background: #667eea;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 500;
+    }
+
+    .user-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .user-table tr:hover {
+        background: #f7fafc;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .badge-admin {
+        background: #667eea;
+        color: white;
+    }
+
+    .badge-user {
+        background: #48bb78;
+        color: white;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #4a5568;
+        font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .btn-danger {
+        background: #fc8181;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #f56565;
+    }
+
+    .create-user-form {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="user-container">
+    <h1 style="margin-bottom: 20px;">👥 Bruger Administration</h1>
+
+    <div class="section">
+        <h2>➕ Opret Ny Bruger</h2>
+        <form method="POST" action="{{ url_for('create_user') }}" class="create-user-form">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+                <div class="form-group">
+                    <label>Brugernavn *</label>
+                    <input type="text" name="username" required placeholder="Indtast brugernavn">
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" name="password" required placeholder="Indtast password">
+                </div>
+                <div class="form-group">
+                    <label>Rolle *</label>
+                    <select name="role" required>
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" class="btn">Opret Bruger</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>📋 Brugere ({{ users|length }})</h2>
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>Brugernavn</th>
+                    <th>Rolle</th>
+                    <th>Oprettet</th>
+                    <th>Sidste Login</th>
+                    <th>Handlinger</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <strong>{{ user.username }}</strong>
+                        {% if user.id == current_user.id %}
+                        <span style="color: #667eea; font-size: 12px;">(dig)</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.role == 'admin' or user.is_admin %}
+                        <span class="badge badge-admin">Admin</span>
+                        {% else %}
+                        <span class="badge badge-user">User</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '-' }}</td>
+                    <td>{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'Aldrig' }}</td>
+                    <td>
+                        {% if user.id != current_user.id %}
+                        <a href="{{ url_for('delete_user', user_id=user.id) }}"
+                           onclick="return confirm('Er du sikker på at du vil slette brugeren {{ user.username }}?')"
+                           class="btn btn-danger btn-small">Slet</a>
+                        {% else %}
+                        <span style="color: #a0aec0; font-size: 12px;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if screen_name %}{{ screen_name }}{% else %}Efterskolen Play - Infoskærm{% endif %}</title>
+    <title>{% if screen_name %}{{ screen_name }}{% else %}{{ site_settings.get('site_title', 'Magion') }} - Infoskærm{% endif %}</title>
     <style>
         * {
             margin: 0;

@@ -3,6 +3,7 @@ import json
 import shutil
 import uuid
 from datetime import datetime
+from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
@@ -48,7 +49,17 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(200))
     is_admin = db.Column(db.Boolean, default=False)
+    role = db.Column(db.String(20), default='user')  # 'admin' or 'user'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+
+class LoginLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    username = db.Column(db.String(100))
+    login_time = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
 
 class Media(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -110,6 +121,14 @@ Media.screen_associations = db.relationship('ScreenMedia', backref='media', casc
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@app.context_processor
+def inject_settings():
+    """Make settings available to all templates"""
+    settings_dict = {}
+    for setting in Settings.query.all():
+        settings_dict[setting.key] = setting.value
+    return dict(site_settings=settings_dict)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -242,21 +261,47 @@ def health():
     """Health check endpoint for Docker"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
+def admin_required(f):
+    """Decorator to require admin role"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
+        if current_user.role != 'admin' and not current_user.is_admin:
+            flash('Du har ikke rettigheder til denne handling', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         user = User.query.filter_by(username=username).first()
-        
+
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            logger.info(f"User {username} logged in")
+
+            # Update last login time
+            user.last_login = datetime.utcnow()
+
+            # Log the login
+            login_log = LoginLog(
+                user_id=user.id,
+                username=user.username,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:500]
+            )
+            db.session.add(login_log)
+            db.session.commit()
+
+            logger.info(f"User {username} logged in from {request.remote_addr}")
             return redirect(url_for('dashboard'))
         else:
             flash('Forkert brugernavn eller password', 'error')
-    
+
     return render_template('login.html')
 
 @app.route('/logout')
@@ -811,8 +856,9 @@ def edit_screen(screen_id):
 
 @app.route('/screen/<int:screen_id>/delete')
 @login_required
+@admin_required
 def delete_screen_route(screen_id):
-    """Delete a screen and all its associations"""
+    """Delete a screen and all its associations (Admin only)"""
     screen = Screen.query.get_or_404(screen_id)
     screen_name = screen.name
 
@@ -822,6 +868,124 @@ def delete_screen_route(screen_id):
 
     flash(f'Skærmen "{screen_name}" er slettet', 'success')
     return redirect(url_for('dashboard'))
+
+# User Management Routes
+@app.route('/users')
+@login_required
+@admin_required
+def users():
+    """User management page (Admin only)"""
+    all_users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('users.html', users=all_users, current_user=current_user)
+
+@app.route('/users/create', methods=['POST'])
+@login_required
+@admin_required
+def create_user():
+    """Create a new user (Admin only)"""
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'user')
+
+    if not username or not password:
+        flash('Brugernavn og password er påkrævet', 'error')
+        return redirect(url_for('users'))
+
+    existing_user = User.query.filter_by(username=username).first()
+    if existing_user:
+        flash(f'Brugeren "{username}" findes allerede', 'error')
+        return redirect(url_for('users'))
+
+    new_user = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+        role=role,
+        is_admin=(role == 'admin')
+    )
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash(f'Bruger "{username}" oprettet som {role}', 'success')
+    return redirect(url_for('users'))
+
+@app.route('/users/<int:user_id>/delete')
+@login_required
+@admin_required
+def delete_user(user_id):
+    """Delete a user (Admin only)"""
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash('Du kan ikke slette din egen bruger', 'error')
+        return redirect(url_for('users'))
+
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+
+    flash(f'Bruger "{username}" er slettet', 'success')
+    return redirect(url_for('users'))
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Change password for current user"""
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not check_password_hash(current_user.password_hash, current_password):
+            flash('Nuværende password er forkert', 'error')
+            return redirect(url_for('change_password'))
+
+        if new_password != confirm_password:
+            flash('De nye passwords matcher ikke', 'error')
+            return redirect(url_for('change_password'))
+
+        if len(new_password) < 4:
+            flash('Password skal være mindst 4 tegn', 'error')
+            return redirect(url_for('change_password'))
+
+        current_user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+
+        flash('Password er ændret', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('change_password.html')
+
+@app.route('/login-history')
+@login_required
+@admin_required
+def login_history():
+    """View login history (Admin only)"""
+    logs = LoginLog.query.order_by(LoginLog.login_time.desc()).limit(100).all()
+    return render_template('login_history.html', logs=logs)
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def settings_page():
+    """Settings management (Admin only)"""
+    if request.method == 'POST':
+        # Update all settings from form
+        for key in request.form:
+            setting = Settings.query.filter_by(key=key).first()
+            if setting:
+                setting.value = request.form[key]
+                setting.updated_at = datetime.utcnow()
+            else:
+                # Create new setting if it doesn't exist
+                new_setting = Settings(key=key, value=request.form[key])
+                db.session.add(new_setting)
+
+        db.session.commit()
+        flash('Indstillinger gemt', 'success')
+        return redirect(url_for('settings_page'))
+
+    all_settings = Settings.query.all()
+    return render_template('settings.html', settings=all_settings)
 
 def init_db():
     """Initialize database with default admin user"""
@@ -836,26 +1000,40 @@ def init_db():
             admin = User(
                 username=admin_username,
                 password_hash=generate_password_hash(admin_password),
-                is_admin=True
+                is_admin=True,
+                role='admin'
             )
             db.session.add(admin)
-            
-            # Default settings
-            default_settings = {
-                'site_title': 'Magion - Infoskærm',
-                'default_image_duration': '5000',
-                'transition_effect': 'fade',
-                'auto_refresh': '21600000',
-                'redirect_enabled': 'False',
-                'redirect_url': 'https://magion.viggo.dk/Screen/1/'
-            }
-            
-            for key, value in default_settings.items():
+        else:
+            # Update existing admin user to have role set
+            admin = User.query.filter_by(username=admin_username).first()
+            if not admin.role:
+                admin.role = 'admin'
+
+        # Default settings - only add if they don't exist
+        default_settings = {
+            'site_title': 'Magion',
+            'site_subtitle': 'Digital Infoskærm System',
+            'company_name': 'Magion',
+            'default_image_duration': '5000',
+            'transition_effect': 'fade',
+            'auto_refresh': '21600000',
+            'redirect_enabled': 'False',
+            'redirect_url': 'https://magion.viggo.dk/Screen/1/'
+        }
+
+        for key, value in default_settings.items():
+            existing = Settings.query.filter_by(key=key).first()
+            if not existing:
                 setting = Settings(key=key, value=value)
                 db.session.add(setting)
-            
+
+        try:
             db.session.commit()
             logger.info(f"Database initialized with admin user: {admin_username}")
+        except Exception as e:
+            db.session.rollback()
+            logger.warning(f"Settings initialization warning (this is normal on restart): {e}")
             
         # Import existing media if available
         import_existing_media()

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Efterskolen Play</title>
+    <title>Login - {{ site_settings.get('site_title', 'Magion') }}</title>
     <style>
         * {
             margin: 0;
@@ -99,8 +99,8 @@
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>Efterskolen Play</h1>
-            <p>Infoskærm Administration</p>
+            <h1>{{ site_settings.get('site_title', 'Magion') }}</h1>
+            <p>{{ site_settings.get('site_subtitle', 'Infoskærm Administration') }}</p>
         </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}

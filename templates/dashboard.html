@@ -586,9 +586,11 @@
                             <div class="screen-menu-item" onclick="openEditScreenModal({{ screen.id }}, '{{ screen.name }}', '{{ screen.location or '' }}', '{{ screen.description or '' }}')">
                                 ✏️ Rediger skærm
                             </div>
+                            {% if user.role == 'admin' or user.is_admin %}
                             <div class="screen-menu-item danger" onclick="confirmDeleteScreen({{ screen.id }}, '{{ screen.name }}')">
                                 🗑️ Slet skærm
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

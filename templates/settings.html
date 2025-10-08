@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}System Indstillinger{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .settings-section {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+    }
+
+    .settings-section h2 {
+        margin: 0 0 20px 0;
+        color: #2d3748;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 0;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 14px;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group-full {
+        grid-column: 1 / -1;
+    }
+
+    .info-box {
+        background: #e6f0ff;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    .info-box strong {
+        color: #667eea;
+    }
+
+    .setting-description {
+        font-size: 12px;
+        color: #718096;
+        margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <h1 style="margin-bottom: 20px;">⚙️ System Indstillinger</h1>
+
+    <div class="info-box">
+        <strong>ℹ️ Multi-kunde system</strong><br>
+        Disse indstillinger gør det muligt at tilpasse systemet til forskellige kunder. Ændr branding, virksomhedsnavn og andre generelle indstillinger her.
+    </div>
+
+    <form method="POST">
+        <!-- Branding Section -->
+        <div class="settings-section">
+            <h2>🎨 Branding & Udseende</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>System Titel *</label>
+                    <input type="text" name="site_title" value="{{ settings|selectattr('key', 'equalto', 'site_title')|map(attribute='value')|first or 'Magion' }}" required>
+                    <div class="setting-description">Vises i browser tab og øverst på siden</div>
+                </div>
+                <div class="form-group">
+                    <label>Undertitel</label>
+                    <input type="text" name="site_subtitle" value="{{ settings|selectattr('key', 'equalto', 'site_subtitle')|map(attribute='value')|first or '' }}">
+                    <div class="setting-description">Kort beskrivelse af systemet</div>
+                </div>
+                <div class="form-group">
+                    <label>Virksomhedsnavn</label>
+                    <input type="text" name="company_name" value="{{ settings|selectattr('key', 'equalto', 'company_name')|map(attribute='value')|first or 'Magion' }}">
+                    <div class="setting-description">Bruges i footer og beskeder</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Media Settings -->
+        <div class="settings-section">
+            <h2>🎬 Media Indstillinger</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Standard Billede Varighed (ms)</label>
+                    <input type="number" name="default_image_duration" value="{{ settings|selectattr('key', 'equalto', 'default_image_duration')|map(attribute='value')|first or '5000' }}" min="1000">
+                    <div class="setting-description">Hvor længe billeder vises som standard</div>
+                </div>
+                <div class="form-group">
+                    <label>Overgangseffekt</label>
+                    <input type="text" name="transition_effect" value="{{ settings|selectattr('key', 'equalto', 'transition_effect')|map(attribute='value')|first or 'fade' }}">
+                    <div class="setting-description">fade, slide, etc.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Settings -->
+        <div class="settings-section">
+            <h2>🔧 System Indstillinger</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Auto Refresh Interval (ms)</label>
+                    <input type="number" name="auto_refresh" value="{{ settings|selectattr('key', 'equalto', 'auto_refresh')|map(attribute='value')|first or '21600000' }}" min="60000">
+                    <div class="setting-description">Hvor ofte skærme genindlæser (6 timer = 21600000ms)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Settings -->
+        <div class="settings-section">
+            <h2>➕ Tilpassede Indstillinger</h2>
+            <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
+                Andre systemindstillinger der er defineret i databasen:
+            </p>
+            <div class="form-grid">
+                {% for setting in settings %}
+                {% if setting.key not in ['site_title', 'site_subtitle', 'company_name', 'default_image_duration', 'transition_effect', 'auto_refresh'] %}
+                <div class="form-group">
+                    <label>{{ setting.key }}</label>
+                    <input type="text" name="{{ setting.key }}" value="{{ setting.value }}">
+                    <div class="setting-description">Sidst opdateret: {{ setting.updated_at.strftime('%d/%m/%Y %H:%M') if setting.updated_at else '-' }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn" style="flex: 1;">💾 Gem Alle Indstillinger</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Annuller</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
