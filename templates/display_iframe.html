@@ -191,6 +191,22 @@
                 // Don't auto-reload on visibility change to avoid disruption
             }
         });
+
+        // Check for screen settings changes (display mode, iframe URL, etc)
+        setInterval(() => {
+            fetch('/api/screen/{{ screen_uuid }}/settings')
+                .then(response => response.json())
+                .then(newSettings => {
+                    // Check if display mode has changed from iframe to something else
+                    if (newSettings.display_mode !== 'iframe') {
+                        console.log(`Display mode changed to ${newSettings.display_mode} - reloading`);
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking settings:', error);
+                });
+        }, 15000); // Check every 15 seconds
     </script>
 </body>
 </html>

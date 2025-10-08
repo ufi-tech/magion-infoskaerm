@@ -575,6 +575,31 @@ def api_media_list():
 
     return jsonify(media_list)
 
+@app.route('/api/screen/<screen_uuid>/settings')
+def api_screen_settings(screen_uuid):
+    """API endpoint for screen settings - used by display pages for periodic checks"""
+    try:
+        screen = Screen.query.filter_by(uuid=screen_uuid).first()
+        if not screen:
+            return jsonify({'error': 'Screen not found'}), 404
+
+        carousel_sponsors = []
+        if screen.carousel_enabled:
+            carousel_sponsors = [s.filename for s in screen.carousel_sponsors]
+
+        return jsonify({
+            'display_mode': screen.display_mode,
+            'json_template': screen.json_template,
+            'carousel_enabled': screen.carousel_enabled,
+            'carousel_speed': screen.carousel_speed or 'medium',
+            'carousel_sponsors_count': len(carousel_sponsors),
+            'magion_logo': screen.magion_logo_path,
+            'sponsor_logo': screen.sponsor_logo_path
+        })
+    except Exception as e:
+        logger.error(f"Error getting screen settings: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/redirect-check')
 def redirect_check():
     """API endpoint to check redirect status - used by display.html for periodic checks"""

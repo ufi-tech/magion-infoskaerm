@@ -969,6 +969,56 @@
             document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
         }
 
+        // Check for settings changes (template, carousel, etc)
+        let currentSettings = {
+            json_template: '{{ json_template }}',
+            carousel_enabled: {{ 'true' if carousel_enabled else 'false' }},
+            carousel_speed: '{{ carousel_speed }}',
+            carousel_sponsors_count: {{ carousel_sponsors|length if carousel_sponsors else 0 }}
+        };
+
+        setInterval(() => {
+            // Skip check if offline
+            if (!navigator.onLine) {
+                console.log('Skipping settings check - offline');
+                return;
+            }
+
+            fetch(`/api/screen/${screenUuid}/settings`)
+                .then(response => response.json())
+                .then(newSettings => {
+                    // Check if any relevant settings have changed
+                    let needsReload = false;
+
+                    if (newSettings.json_template !== currentSettings.json_template) {
+                        console.log(`Template changed: ${currentSettings.json_template} → ${newSettings.json_template} - reloading`);
+                        needsReload = true;
+                    }
+
+                    if (newSettings.carousel_enabled !== currentSettings.carousel_enabled) {
+                        console.log(`Carousel enabled changed: ${currentSettings.carousel_enabled} → ${newSettings.carousel_enabled} - reloading`);
+                        needsReload = true;
+                    }
+
+                    if (newSettings.carousel_speed !== currentSettings.carousel_speed) {
+                        console.log(`Carousel speed changed: ${currentSettings.carousel_speed} → ${newSettings.carousel_speed} - reloading`);
+                        needsReload = true;
+                    }
+
+                    if (newSettings.carousel_sponsors_count !== currentSettings.carousel_sponsors_count) {
+                        console.log(`Carousel sponsors changed: ${currentSettings.carousel_sponsors_count} → ${newSettings.carousel_sponsors_count} - reloading`);
+                        needsReload = true;
+                    }
+
+                    if (needsReload) {
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking settings (kan være offline):', error);
+                });
+        }, 15000); // Check every 15 seconds
+
         // Initialize
         updateDateTime();
         setInterval(updateDateTime, 1000);

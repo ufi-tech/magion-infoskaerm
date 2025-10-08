@@ -630,6 +630,30 @@
                     }
                 });
         }, 60000); // Check every minute
+
+        {% if screen_uuid %}
+        // Check for screen settings changes (display mode, etc) - only for specific screens
+        setInterval(() => {
+            // Skip check if offline
+            if (!navigator.onLine) {
+                console.log('Skipping settings check - offline');
+                return;
+            }
+
+            fetch('/api/screen/{{ screen_uuid }}/settings')
+                .then(response => response.json())
+                .then(newSettings => {
+                    // Check if display mode has changed from media to something else
+                    if (newSettings.display_mode !== 'media') {
+                        console.log(`Display mode changed to ${newSettings.display_mode} - reloading`);
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking settings (kan være offline):', error);
+                });
+        }, 15000); // Check every 15 seconds
+        {% endif %}
     </script>
 </body>
 </html>
