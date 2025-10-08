@@ -239,7 +239,7 @@
             background: linear-gradient(to right, #e8f5e9, white);
         }
 
-        /* Table Template (Classic) */
+        /* Table Template (Compact) */
         .template-table .activities-container {
             max-width: 1600px;
             margin: 0 auto;
@@ -297,6 +297,66 @@
         }
 
         .template-table .current-row .time-cell::before {
+            content: '⚡ ';
+        }
+
+        /* Table Template Large (Original Size) */
+        .template-table-large .activities-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .template-table-large table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            animation: fadeIn 0.5s;
+        }
+
+        .template-table-large th {
+            background: #EF7D00;
+            color: white;
+            padding: 18px 15px;
+            text-align: left;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 3px solid #e65100;
+        }
+
+        .template-table-large td {
+            padding: 16px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 17px;
+            color: #333;
+        }
+
+        .template-table-large tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .template-table-large tr:hover {
+            background: #fff3e0;
+        }
+
+        .template-table-large .time-cell {
+            font-weight: 700;
+            color: #EF7D00;
+            white-space: nowrap;
+            min-width: 140px;
+        }
+
+        .template-table-large .title-cell {
+            font-weight: 600;
+            color: #000;
+        }
+
+        .template-table-large .current-row {
+            background: #e8f5e9 !important;
+            border-left: 6px solid #00C853;
+        }
+
+        .template-table-large .current-row .time-cell::before {
             content: '⚡ ';
         }
 
@@ -474,6 +534,67 @@
         }
 
         .template-compact .compact-item.current .compact-time::before {
+            content: '⚡ ';
+        }
+
+        /* Compact Template Large (Original Size) */
+        .template-compact-large .activities-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .template-compact-large .compact-item {
+            background: white;
+            padding: 18px 30px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            animation: slideIn 0.5s;
+            border-left: 4px solid transparent;
+        }
+
+        .template-compact-large .compact-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(5px);
+            border-left-color: #EF7D00;
+        }
+
+        .template-compact-large .compact-time {
+            min-width: 160px;
+            font-size: 26px;
+            font-weight: 700;
+            color: #EF7D00;
+            white-space: nowrap;
+        }
+
+        .template-compact-large .compact-title {
+            flex: 1;
+            font-size: 24px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .template-compact-large .compact-location {
+            font-size: 20px;
+            color: #666;
+            min-width: 200px;
+            text-align: right;
+        }
+
+        .template-compact-large .compact-item.current {
+            background: linear-gradient(to right, #e8f5e9, white);
+            border-left-color: #00C853;
+        }
+
+        .template-compact-large .compact-item.current .compact-time {
+            color: #00C853;
+        }
+
+        .template-compact-large .compact-item.current .compact-time::before {
             content: '⚡ ';
         }
 
@@ -815,10 +936,16 @@
                 case 'table':
                     renderTableTemplate(activeData, currentTime, tempContainer);
                     break;
+                case 'table-large':
+                    renderTableTemplate(activeData, currentTime, tempContainer);
+                    break;
                 case 'timeline':
                     renderTimelineTemplate(activeData, currentTime, tempContainer);
                     break;
                 case 'compact':
+                    renderCompactTemplate(activeData, currentTime, tempContainer);
+                    break;
+                case 'compact-large':
                     renderCompactTemplate(activeData, currentTime, tempContainer);
                     break;
                 default: // 'schedule'

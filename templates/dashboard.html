@@ -686,9 +686,11 @@
                                     <label style="color: white;">🎨 Display Template</label>
                                     <select name="json_template" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
                                         <option value="schedule" {% if screen.json_template == 'schedule' or not screen.json_template %}selected{% endif %}>📅 Kort Visning (cards)</option>
-                                        <option value="table" {% if screen.json_template == 'table' %}selected{% endif %}>📊 Tabel Visning (klassisk)</option>
+                                        <option value="table" {% if screen.json_template == 'table' %}selected{% endif %}>📊 Tabel - Lille (kompakt)</option>
+                                        <option value="table-large" {% if screen.json_template == 'table-large' %}selected{% endif %}>📊 Tabel - Stor (romslig)</option>
                                         <option value="timeline" {% if screen.json_template == 'timeline' %}selected{% endif %}>⏰ Tidslinje (visuelt)</option>
-                                        <option value="compact" {% if screen.json_template == 'compact' %}selected{% endif %}>📋 Kompakt Liste (minimal)</option>
+                                        <option value="compact" {% if screen.json_template == 'compact' %}selected{% endif %}>📋 Kompakt - Lille</option>
+                                        <option value="compact-large" {% if screen.json_template == 'compact-large' %}selected{% endif %}>📋 Kompakt - Stor</option>
                                     </select>
                                     <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vælg hvordan aktivitetsdata skal vises på skærmen</div>
                                 </div>
