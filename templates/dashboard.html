@@ -422,8 +422,15 @@
                         {% endif %}
                         <div class="media-info">
                             <div class="media-title">{{ media.original_filename }}</div>
+                            {% if media.expire_at %}
+                            <div style="font-size: 10px; color: #ed8936; margin-top: 4px;">
+                                ⏰ {{ media.expire_at.strftime('%d/%m %H:%M') }}
+                                {% if media.auto_delete %}🗑️{% endif %}
+                            </div>
+                            {% endif %}
                             <div class="media-controls">
                                 <div class="toggle-switch {% if media.active %}active{% endif %}" onclick="toggleMedia({{ media.id }}, this)"></div>
+                                <button onclick="openExpireModal({{ media.id }}, '{{ media.original_filename }}', '{{ media.expire_at.isoformat() if media.expire_at else '' }}', {{ 'true' if media.auto_delete else 'false' }})" class="btn btn-secondary btn-small" title="Sæt udløbsdato">⏰</button>
                                 <button onclick="deleteMedia({{ media.id }})" class="btn btn-danger btn-small">Slet</button>
                             </div>
                         </div>
@@ -508,8 +515,15 @@
                                 {% endif %}
                                 <div class="media-info">
                                     <div class="media-title">{{ media.original_filename }}</div>
+                                    {% if media.expire_at %}
+                                    <div style="font-size: 10px; color: #ed8936; margin-top: 4px;">
+                                        ⏰ {{ media.expire_at.strftime('%d/%m %H:%M') }}
+                                        {% if media.auto_delete %}🗑️{% endif %}
+                                    </div>
+                                    {% endif %}
                                     <div class="media-controls">
                                         <div class="toggle-switch {% if media.active %}active{% endif %}" onclick="toggleMedia({{ media.id }}, this)"></div>
+                                        <button onclick="openExpireModal({{ media.id }}, '{{ media.original_filename }}', '{{ media.expire_at.isoformat() if media.expire_at else '' }}', {{ 'true' if media.auto_delete else 'false' }})" class="btn btn-secondary btn-small" title="Sæt udløbsdato">⏰</button>
                                         <button onclick="deleteMedia({{ media.id }})" class="btn btn-danger btn-small">Slet</button>
                                     </div>
                                 </div>
@@ -569,6 +583,44 @@
                 <button type="button" onclick="closeCreateScreenModal()" class="btn btn-secondary" style="flex: 1;">Annuller</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- EXPIRE MODAL -->
+<div id="expireModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+        <h2 style="margin-top: 0;">⏰ Sæt Udløbsdato</h2>
+        <p style="color: #718096; margin-bottom: 20px;" id="expireModalFileName"></p>
+
+        <div class="form-group">
+            <label>Udløbsdato og tid</label>
+            <input type="datetime-local" id="expireDateTime" class="form-control" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px;">
+            <small style="color: #718096; display: block; margin-top: 5px;">Når denne dato/tid nås, vil mediet blive deaktiveret eller slettet</small>
+        </div>
+
+        <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="expireAutoDelete" style="width: 20px; height: 20px;">
+                <span>🗑️ Auto-slet filen når den udløber</span>
+            </label>
+            <small style="color: #718096; display: block; margin-top: 5px;">Hvis ikke markeret, bliver filen kun deaktiveret</small>
+        </div>
+
+        <div style="background: #f0f5ff; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; margin: 15px 0;">
+            <strong style="color: #667eea;">💡 Tips:</strong>
+            <ul style="margin: 10px 0 0 20px; font-size: 13px; color: #4a5568; line-height: 1.6;">
+                <li>Perfekt til kampagner med deadline</li>
+                <li>Sæsonbaseret indhold (jul, påske, osv.)</li>
+                <li>Tidsbestemt information</li>
+                <li>Cleanup kører automatisk hver time</li>
+            </ul>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button onclick="saveExpireSettings()" class="btn btn-primary" style="flex: 1;">💾 Gem</button>
+            <button onclick="clearExpireSettings()" class="btn btn-secondary">🗑️ Fjern Udløb</button>
+            <button onclick="closeExpireModal()" class="btn btn-secondary">Annuller</button>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -660,6 +712,89 @@ function handleScreenFileSelect(input, screenId) {
     });
 }
 
+// Expire modal functionality
+let currentExpireMediaId = null;
+
+function openExpireModal(mediaId, fileName, currentExpire, currentAutoDelete) {
+    currentExpireMediaId = mediaId;
+    document.getElementById('expireModalFileName').textContent = fileName;
+
+    // Set current values
+    if (currentExpire) {
+        // Convert ISO string to datetime-local format
+        const date = new Date(currentExpire);
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+        document.getElementById('expireDateTime').value = localDate.toISOString().slice(0, 16);
+    } else {
+        document.getElementById('expireDateTime').value = '';
+    }
+
+    document.getElementById('expireAutoDelete').checked = currentAutoDelete;
+    document.getElementById('expireModal').style.display = 'flex';
+}
+
+function closeExpireModal() {
+    document.getElementById('expireModal').style.display = 'none';
+    currentExpireMediaId = null;
+}
+
+function saveExpireSettings() {
+    if (!currentExpireMediaId) return;
+
+    const expireDateTime = document.getElementById('expireDateTime').value;
+    const autoDelete = document.getElementById('expireAutoDelete').checked;
+
+    if (!expireDateTime) {
+        alert('Vælg venligst en dato og tid');
+        return;
+    }
+
+    const data = {
+        expire_at: new Date(expireDateTime).toISOString(),
+        auto_delete: autoDelete
+    };
+
+    fetch(`/media/${currentExpireMediaId}/expire`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Udløbsindstillinger gemt!');
+            closeExpireModal();
+            window.location.reload();
+        } else {
+            alert('Fejl: ' + (result.error || 'Kunne ikke gemme'));
+        }
+    })
+    .catch(error => {
+        alert('Netværksfejl: ' + error);
+    });
+}
+
+function clearExpireSettings() {
+    if (!currentExpireMediaId) return;
+
+    if (!confirm('Er du sikker på at du vil fjerne udløbsdatoen?')) return;
+
+    fetch(`/media/${currentExpireMediaId}/expire`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({expire_at: null, auto_delete: false})
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Udløbsdato fjernet!');
+            closeExpireModal();
+            window.location.reload();
+        }
+    });
+}
+
 // Drag and drop support
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.upload-zone').forEach(zone => {
@@ -690,6 +825,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Run cleanup check every hour
+    setInterval(() => {
+        fetch('/api/cleanup-expired', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.deactivated > 0 || result.deleted > 0) {
+                console.log(`Cleanup: ${result.deactivated} deaktiveret, ${result.deleted} slettet`);
+                window.location.reload(); // Reload to show changes
+            }
+        });
+    }, 3600000); // Every hour
 });
 </script>
 {% endblock %}

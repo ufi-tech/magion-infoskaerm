@@ -62,6 +62,10 @@ class Media(db.Model):
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     is_global = db.Column(db.Boolean, default=True)  # Global media shown on all screens
 
+    # Expire/scheduling settings
+    expire_at = db.Column(db.DateTime, nullable=True)  # When to stop showing this media
+    auto_delete = db.Column(db.Boolean, default=False)  # Delete file after expire_at
+
 class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
@@ -120,6 +124,38 @@ def generate_qr_code(data):
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     return f"data:image/png;base64,{img_str}"
+
+def cleanup_expired_media():
+    """Check and cleanup expired media files"""
+    now = datetime.utcnow()
+    expired_media = Media.query.filter(Media.expire_at <= now, Media.expire_at.isnot(None)).all()
+
+    cleaned_count = 0
+    deleted_count = 0
+
+    for media in expired_media:
+        if media.auto_delete:
+            # Delete file and database entry
+            try:
+                optimized_path = os.path.join(app.config['OPTIMIZED_FOLDER'], media.filename)
+                if os.path.exists(optimized_path):
+                    os.remove(optimized_path)
+                db.session.delete(media)
+                deleted_count += 1
+                logger.info(f"Auto-deleted expired media: {media.original_filename}")
+            except Exception as e:
+                logger.error(f"Error deleting expired media {media.id}: {e}")
+        else:
+            # Just deactivate
+            if media.active:
+                media.active = False
+                cleaned_count += 1
+                logger.info(f"Deactivated expired media: {media.original_filename}")
+
+    if cleaned_count > 0 or deleted_count > 0:
+        db.session.commit()
+
+    return {'deactivated': cleaned_count, 'deleted': deleted_count}
 
 def optimize_image(input_path, output_path):
     """Optimize image to EXACTLY 1920x1080 with black background"""
@@ -229,11 +265,15 @@ def dashboard():
     for setting in Settings.query.all():
         settings[setting.key] = setting.value
 
+    # Run cleanup on page load
+    cleanup_expired_media()
+
     return render_template('dashboard.html',
                          media_files=media_files,
                          screens=screens,
                          settings=settings,
-                         user=current_user)
+                         user=current_user,
+                         now=datetime.utcnow())
 
 @app.route('/upload', methods=['POST'])
 @login_required
@@ -317,11 +357,37 @@ def toggle_media(media_id):
 def update_duration(media_id):
     media = Media.query.get_or_404(media_id)
     duration = request.json.get('duration', 5000)
-    
+
     media.duration = duration
     db.session.commit()
-    
+
     return jsonify({'success': True})
+
+@app.route('/media/<int:media_id>/expire', methods=['POST'])
+@login_required
+def update_media_expire(media_id):
+    """Update expire settings for media"""
+    media = Media.query.get_or_404(media_id)
+    data = request.json
+
+    expire_datetime = data.get('expire_at')
+    if expire_datetime:
+        try:
+            # Parse ISO datetime string
+            media.expire_at = datetime.fromisoformat(expire_datetime.replace('Z', '+00:00'))
+        except:
+            return jsonify({'success': False, 'error': 'Ugyldig dato format'}), 400
+    else:
+        media.expire_at = None
+
+    media.auto_delete = data.get('auto_delete', False)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'expire_at': media.expire_at.isoformat() if media.expire_at else None,
+        'auto_delete': media.auto_delete
+    })
 
 @app.route('/reorder', methods=['POST'])
 @login_required
@@ -429,6 +495,33 @@ def redirect_check():
     return jsonify({
         'redirect_enabled': redirect_enabled.value == 'True' if redirect_enabled else False,
         'redirect_url': redirect_url.value if redirect_url else ''
+    })
+
+@app.route('/api/cleanup-expired', methods=['POST'])
+@login_required
+def api_cleanup_expired():
+    """Manually trigger cleanup of expired media"""
+    result = cleanup_expired_media()
+    return jsonify({
+        'success': True,
+        'deactivated': result['deactivated'],
+        'deleted': result['deleted']
+    })
+
+@app.route('/api/media/<int:media_id>/expire-status')
+@login_required
+def get_media_expire_status(media_id):
+    """Get expire status for a media file"""
+    media = Media.query.get_or_404(media_id)
+
+    is_expired = False
+    if media.expire_at:
+        is_expired = datetime.utcnow() >= media.expire_at
+
+    return jsonify({
+        'expire_at': media.expire_at.isoformat() if media.expire_at else None,
+        'auto_delete': media.auto_delete,
+        'is_expired': is_expired
     })
 
 # ========== SCREEN MANAGEMENT ROUTES ==========
