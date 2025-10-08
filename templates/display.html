@@ -214,6 +214,11 @@
     </div>
     {% endif %}
 
+    <!-- Offline Indicator -->
+    <div id="offlineIndicator" style="position: fixed; top: 20px; right: 20px; background: rgba(255, 152, 0, 0.95); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1001; display: none;">
+        📡 Offline Mode - Viser cached indhold
+    </div>
+
     <!-- Debug Console -->
     <div id="debugConsole" style="position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 12px; width: 100%; height: 200px; overflow-y: scroll; z-index: 9999; display: none;">
         <div id="debugLog"></div>
@@ -253,8 +258,25 @@
 
         class InfoScreen {
             constructor() {
+                // Try to use provided mediaList, fallback to localStorage if offline
+                let mediaData = mediaList;
+
+                // If no media provided (offline reload), try localStorage
+                if (!mediaData || mediaData.length === 0) {
+                    const cached = localStorage.getItem('mediaList_cache');
+                    if (cached) {
+                        mediaData = JSON.parse(cached);
+                        console.log('📡 Using cached media list (offline mode)');
+                        this.showOfflineIndicator();
+                    }
+                } else {
+                    // Save to localStorage for offline use
+                    localStorage.setItem('mediaList_cache', JSON.stringify(mediaData));
+                    localStorage.setItem('mediaList_cache_time', Date.now());
+                }
+
                 // Create a deep copy to prevent reference issues
-                this.mediaList = JSON.parse(JSON.stringify(mediaList));
+                this.mediaList = JSON.parse(JSON.stringify(mediaData));
                 Object.freeze(this.mediaList); // Prevent accidental modification
                 // debugLog(`InfoScreen initialized with ${this.mediaList.length} media files`);
                 this.currentIndex = 0;
@@ -485,16 +507,62 @@
                     }
                 });
             }
+
+            showOfflineIndicator() {
+                const indicator = document.getElementById('offlineIndicator');
+                if (indicator) {
+                    indicator.style.display = 'block';
+                }
+            }
+
+            hideOfflineIndicator() {
+                const indicator = document.getElementById('offlineIndicator');
+                if (indicator) {
+                    indicator.style.display = 'none';
+                }
+            }
         }
 
         // Global reference to screen instance
         let currentScreen = null;
+
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered for offline support');
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
 
         // Start when page loads
         window.addEventListener('load', () => {
             // debugLog('PAGE LOADED - Starting InfoScreen');
             currentScreen = new InfoScreen();
             currentScreen.init();
+        });
+
+        // Online/Offline detection
+        window.addEventListener('online', () => {
+            console.log('🌐 Connection restored - online');
+            if (currentScreen) {
+                currentScreen.hideOfflineIndicator();
+            }
+            // Reload to get fresh data after coming back online
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 Connection lost - offline mode');
+            if (currentScreen) {
+                currentScreen.showOfflineIndicator();
+            }
         });
 
         // Check for redirect override periodically (every 30 seconds)
@@ -508,15 +576,26 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Redirect check fejlede:', error);
+                    console.error('Redirect check fejlede (kan være offline):', error);
+                    // Don't show error if we're just offline
                 });
         }, 30000); // Check every 30 seconds
 
         // Check for media list updates periodically
         setInterval(() => {
+            // Skip check if offline
+            if (!navigator.onLine) {
+                console.log('Skipping media check - offline');
+                return;
+            }
+
             fetch('/api/media-list')
                 .then(response => response.json())
                 .then(newList => {
+                    // Update localStorage cache with fresh data
+                    localStorage.setItem('mediaList_cache', JSON.stringify(newList));
+                    localStorage.setItem('mediaList_cache_time', Date.now());
+
                     // Compare with current screen's media list, not the global constant
                     if (currentScreen) {
                         // Only check lengths first - much more reliable than JSON stringify
@@ -544,7 +623,11 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error checking for updates:', error);
+                    console.error('Error checking for updates (kan være offline):', error);
+                    // If offline, show indicator
+                    if (!navigator.onLine && currentScreen) {
+                        currentScreen.showOfflineIndicator();
+                    }
                 });
         }, 60000); // Check every minute
     </script>
