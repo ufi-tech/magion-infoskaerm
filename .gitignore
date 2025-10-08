@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Only keep the Docker app entry point; ignore other Python scripts
+*.py
+!app_docker.py
+
+# Virtual environments
+.env
+.env.*
+venv/
+.venv/
+env/
+
+# Flask/DB
+instance/
+*.db
+*.sqlite*
+*.log
+
+# Local persistent data and media (do not commit)
+docker-data/
+uploads/
+originals/
+optimized/
+resized_*/
+resized_test/
+resized_1920x1080/
+
+# Root-level loose media files (keep templates/static)
+/*.jpg
+/*.jpeg
+/*.png
+/*.gif
+/*.mp4
+/*.mov
+/*.avi
+/*.webm
+/*.mkv
+
+# Project-specific local files
+*.bat
+media_list.json
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build/artifacts
+build/
+dist/

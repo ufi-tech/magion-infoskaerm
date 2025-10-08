@@ -1,0 +1,72 @@
+version: '3.8'
+
+# OFFLINE VERSION - Ingen eksterne images
+# Perfekt til Synology med authentication problemer
+
+services:
+  infoskaerm:
+    # Bruger lokalt bygget image
+    image: magion:latest
+    container_name: magion-infoskaerm
+    ports:
+      - "45765:45765"
+    volumes:
+      # Data persistence
+      - ./docker-data/db:/app/data
+      - ./docker-data/uploads:/app/uploads
+      - ./docker-data/optimized:/app/optimized
+      - ./docker-data/originals:/app/originals
+
+      # For development - mount templates, static and app file
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+      - ./app_docker.py:/app/app.py:ro
+    environment:
+      - FLASK_ENV=production
+      - PORT=45765
+      - DATABASE_URL=sqlite:////app/data/infoskaerm.db
+      - SECRET_KEY=${SECRET_KEY:-magion-2024-secret-key-change-this}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-magion2024}
+      - TZ=Europe/Copenhagen
+    restart: unless-stopped
+    networks:
+      - devserver_dev_network
+
+networks:
+  devserver_dev_network:
+    external: true
+
+# ========================================
+# KOMPLET OFFLINE INSTALLATION
+# ========================================
+#
+# Denne metode fungerer UDEN internet/Docker Hub
+#
+# STEG 1: Byg image lokalt først
+# -------------------------------
+# sudo docker build -f Dockerfile -t magion:latest . --no-cache
+#
+# STEG 2: Verificer image er bygget
+# ----------------------------------
+# sudo docker images | grep magion
+#
+# STEG 3: Start container
+# -----------------------
+# sudo docker-compose up -d
+#
+# STEG 4: Tjek logs
+# -----------------
+# sudo docker-compose logs -f
+#
+# ADGANG:
+# -------
+# http://[server-ip]:45765/
+#
+# GENSTART:
+# ---------
+# sudo docker-compose restart
+#
+# STOP:
+# -----
+# sudo docker-compose down

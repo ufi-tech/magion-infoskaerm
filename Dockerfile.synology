@@ -1,0 +1,30 @@
+# Dockerfile optimeret til Synology NAS
+FROM alpine:3.18
+
+# Installer Python og nødvendige pakker
+RUN apk add --no-cache python3 py3-pip curl && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Installer Python dependencies
+RUN pip3 install --no-cache-dir --break-system-packages \
+    flask \
+    flask-cors \
+    pillow \
+    werkzeug
+
+# Kopier kun de filer der faktisk eksisterer
+COPY app_docker.py ./
+
+# Kopier mapper hvis de eksisterer
+COPY templates/ ./templates/
+COPY static/ ./static/
+
+# Opret nødvendige mapper
+RUN mkdir -p /app/data /app/uploads /app/optimized /app/originals /app/instance
+
+# Eksponér port
+EXPOSE 45764
+
+# Start kommando
+CMD ["python3", "app_docker.py"]

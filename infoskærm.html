@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Efterskolen Play - Infoskærm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            cursor: none; /* Skjul musepil på infoskærm */
+        }
+
+        #mediaContainer {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .media-item {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            display: none;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        .media-item.active {
+            display: block;
+        }
+
+        img.media-item {
+            object-fit: contain;
+        }
+
+        video.media-item {
+            object-fit: contain;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Progress bar */
+        #progressBar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.2);
+            z-index: 10;
+        }
+
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        /* Info overlay */
+        #infoOverlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #infoOverlay.visible {
+            opacity: 1;
+        }
+
+        /* Loading screen */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .loader {
+            border: 5px solid #333;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        /* Error message */
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingScreen">
+        <div class="loader"></div>
+        <div class="loading-text">Indlæser medier...</div>
+    </div>
+
+    <div id="mediaContainer"></div>
+    
+    <div id="progressBar">
+        <div id="progressFill"></div>
+    </div>
+
+    <div id="infoOverlay">
+        <span id="mediaInfo"></span>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <script>
+        class InfoScreen {
+            constructor() {
+                this.mediaList = [];
+                this.currentIndex = 0;
+                this.mediaContainer = document.getElementById('mediaContainer');
+                this.progressFill = document.getElementById('progressFill');
+                this.infoOverlay = document.getElementById('infoOverlay');
+                this.mediaInfo = document.getElementById('mediaInfo');
+                this.loadingScreen = document.getElementById('loadingScreen');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.currentTimeout = null;
+                this.progressInterval = null;
+                this.preloadedMedia = new Map();
+            }
+
+            async init() {
+                try {
+                    // Hent medieliste
+                    const response = await fetch('media_list.json');
+                    if (!response.ok) throw new Error('Kunne ikke hente medieliste');
+                    
+                    this.mediaList = await response.json();
+                    
+                    if (this.mediaList.length === 0) {
+                        throw new Error('Ingen medier fundet');
+                    }
+
+                    // Preload første par medier
+                    await this.preloadInitialMedia();
+                    
+                    // Start slideshow
+                    this.hideLoadingScreen();
+                    this.startSlideshow();
+
+                    // Preload resten i baggrunden
+                    this.preloadRemainingMedia();
+
+                    // Keyboard controls
+                    this.setupKeyboardControls();
+
+                } catch (error) {
+                    this.showError('Fejl ved indlæsning: ' + error.message);
+                }
+            }
+
+            async preloadInitialMedia() {
+                // Preload de første 3 medier
+                const preloadCount = Math.min(3, this.mediaList.length);
+                const promises = [];
+                
+                for (let i = 0; i < preloadCount; i++) {
+                    promises.push(this.preloadMedia(i));
+                }
+                
+                await Promise.all(promises);
+            }
+
+            async preloadMedia(index) {
+                const media = this.mediaList[index];
+                if (!media || this.preloadedMedia.has(index)) return;
+
+                return new Promise((resolve) => {
+                    if (media.type === 'image') {
+                        const img = new Image();
+                        img.onload = () => {
+                            this.preloadedMedia.set(index, img);
+                            resolve();
+                        };
+                        img.onerror = resolve;
+                        img.src = media.path;
+                    } else if (media.type === 'video') {
+                        // Videos preloades ikke helt, men markeres som klar
+                        this.preloadedMedia.set(index, true);
+                        resolve();
+                    }
+                });
+            }
+
+            async preloadRemainingMedia() {
+                // Preload resten af medierne i baggrunden
+                for (let i = 3; i < this.mediaList.length; i++) {
+                    await this.preloadMedia(i);
+                    // Lille pause mellem hver preload
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+
+            hideLoadingScreen() {
+                this.loadingScreen.style.display = 'none';
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.style.display = 'block';
+                console.error(message);
+            }
+
+            startSlideshow() {
+                this.showMedia(this.currentIndex);
+            }
+
+            showMedia(index) {
+                // Clear existing content
+                this.mediaContainer.innerHTML = '';
+                
+                // Reset progress
+                this.stopProgress();
+                
+                const media = this.mediaList[index];
+                let element;
+
+                if (media.type === 'image') {
+                    element = document.createElement('img');
+                    element.src = media.path;
+                    element.className = 'media-item active';
+                    
+                    // Start progress bar for billeder
+                    this.startProgress(media.duration || 5000);
+                    
+                    // Næste medie efter duration
+                    this.currentTimeout = setTimeout(() => {
+                        this.nextMedia();
+                    }, media.duration || 5000);
+                    
+                } else if (media.type === 'video') {
+                    element = document.createElement('video');
+                    element.src = media.path;
+                    element.className = 'media-item active';
+                    element.autoplay = true;
+                    element.muted = true; // Vigtigt for autoplay
+                    element.playsInline = true;
+                    
+                    // Når video slutter, gå til næste
+                    element.onended = () => {
+                        this.nextMedia();
+                    };
+
+                    // Start progress baseret på video duration
+                    element.onloadedmetadata = () => {
+                        this.startProgress(element.duration * 1000);
+                    };
+
+                    element.onerror = () => {
+                        console.error('Kunne ikke afspille video:', media.path);
+                        this.nextMedia();
+                    };
+                }
+
+                if (element) {
+                    this.mediaContainer.appendChild(element);
+                    this.updateInfo(media);
+                    
+                    // Preload næste par medier
+                    this.preloadNext();
+                }
+            }
+
+            preloadNext() {
+                // Preload de næste 2 medier
+                const next1 = (this.currentIndex + 1) % this.mediaList.length;
+                const next2 = (this.currentIndex + 2) % this.mediaList.length;
+                
+                this.preloadMedia(next1);
+                this.preloadMedia(next2);
+            }
+
+            startProgress(duration) {
+                const startTime = Date.now();
+                this.progressFill.style.width = '0%';
+                
+                this.progressInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min((elapsed / duration) * 100, 100);
+                    this.progressFill.style.width = progress + '%';
+                    
+                    if (progress >= 100) {
+                        clearInterval(this.progressInterval);
+                    }
+                }, 100);
+            }
+
+            stopProgress() {
+                if (this.progressInterval) {
+                    clearInterval(this.progressInterval);
+                    this.progressInterval = null;
+                }
+                if (this.currentTimeout) {
+                    clearTimeout(this.currentTimeout);
+                    this.currentTimeout = null;
+                }
+                this.progressFill.style.width = '0%';
+            }
+
+            updateInfo(media) {
+                const current = this.currentIndex + 1;
+                const total = this.mediaList.length;
+                const type = media.type === 'image' ? 'Billede' : 'Video';
+                this.mediaInfo.textContent = `${type} ${current}/${total}`;
+                
+                // Vis info kort
+                this.infoOverlay.classList.add('visible');
+                setTimeout(() => {
+                    this.infoOverlay.classList.remove('visible');
+                }, 3000);
+            }
+
+            nextMedia() {
+                this.currentIndex = (this.currentIndex + 1) % this.mediaList.length;
+                this.showMedia(this.currentIndex);
+            }
+
+            previousMedia() {
+                this.currentIndex = (this.currentIndex - 1 + this.mediaList.length) % this.mediaList.length;
+                this.showMedia(this.currentIndex);
+            }
+
+            setupKeyboardControls() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowRight':
+                        case ' ':
+                            this.stopProgress();
+                            this.nextMedia();
+                            break;
+                        case 'ArrowLeft':
+                            this.stopProgress();
+                            this.previousMedia();
+                            break;
+                        case 'i':
+                            // Toggle info overlay
+                            this.infoOverlay.classList.toggle('visible');
+                            break;
+                        case 'Escape':
+                            // Fullscreen toggle
+                            if (document.fullscreenElement) {
+                                document.exitFullscreen();
+                            } else {
+                                document.documentElement.requestFullscreen();
+                            }
+                            break;
+                    }
+                });
+            }
+        }
+
+        // Start når siden er loaded
+        window.addEventListener('load', () => {
+            const screen = new InfoScreen();
+            screen.init();
+        });
+
+        // Auto-reload siden hver 6. time for at få opdateringer
+        setTimeout(() => {
+            window.location.reload();
+        }, 6 * 60 * 60 * 1000);
+    </script>
+</body>
+</html>

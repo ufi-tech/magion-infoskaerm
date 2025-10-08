@@ -1,0 +1,63 @@
+SYNOLOGY NAS - DOCKER KOMMANDOER
+=================================
+
+KOPIER OG KØR DISSE KOMMANDOER I DIN SSH SESSION:
+
+STEG 1: Check om filerne er der
+--------------------------------
+ls -la /volume1/docker/efterskolenplay/
+
+
+STEG 2: Byg Docker image lokalt (VIGTIGT!)
+-------------------------------------------
+sudo docker build -f Dockerfile.simple -t efterskolen-play:latest . --no-cache
+
+
+Hvis Dockerfile.simple ikke findes, opret den først:
+-----------------------------------------------------
+cat > Dockerfile.simple << 'EOF'
+FROM alpine:3.18
+RUN apk add --no-cache python3 py3-pip curl && rm -rf /var/cache/apk/*
+WORKDIR /app
+RUN pip3 install --no-cache-dir --break-system-packages flask flask-cors pillow werkzeug
+COPY app_docker.py infoskaerm.html ./
+COPY templates/ ./templates/
+COPY static/ ./static/
+RUN mkdir -p /app/data /app/uploads /app/optimized /app/originals
+EXPOSE 45764
+CMD ["python3", "app_docker.py"]
+EOF
+
+
+STEG 3: Verificer at image er bygget
+-------------------------------------
+sudo docker images | grep efterskolen-play
+
+
+STEG 4: Start container
+-----------------------
+sudo docker-compose -f docker-compose-offline.yml up -d
+
+
+STEG 5: Check logs
+------------------
+sudo docker-compose -f docker-compose-offline.yml logs -f
+
+
+HVIS DU FÅR FEJL MED ALPINE:
+-----------------------------
+Prøv denne alternative Dockerfile:
+
+cat > Dockerfile.basic << 'EOF'
+FROM busybox:1.36
+ADD https://dl-cdn.alpinelinux.org/alpine/v3.18/main/x86_64/python3-3.11.9-r0.apk /tmp/
+RUN echo "Manual Python installation needed"
+EOF
+
+Og byg med:
+sudo docker build -f Dockerfile.basic -t efterskolen-play:latest .
+
+
+ALTERNATIV LØSNING - Direkte Python:
+-------------------------------------
+sudo python3 /volume1/docker/efterskolenplay/app_docker.py &

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# Flask
+instance/
+.webassets-cache
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+originals/
+uploads/
+docker-data/
+*.bat
+START_*.bat
+infoskærm.html
+infoskaerm.html
+start_infoskaerm.py
+app.py
+optimize_media.py
+import_existing.py
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

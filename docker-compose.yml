@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  infoskaerm:
+    image: magion:latest
+    container_name: magion-infoskaerm
+    ports:
+      - "45765:45765"
+    volumes:
+      # Persistent data storage
+      - ./docker-data/db:/app/data
+      - ./docker-data/uploads:/app/uploads
+      - ./docker-data/optimized:/app/optimized
+      - ./docker-data/originals:/app/originals
+      
+      # For development - kan fjernes i produktion
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+    environment:
+      - FLASK_ENV=production
+      - PORT=45765
+      - DATABASE_URL=sqlite:////app/data/infoskaerm.db
+      - SECRET_KEY=${SECRET_KEY:-magion-2024-secret-key-change-this}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-magion2024}
+    restart: unless-stopped
+    networks:
+      - devserver_dev_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:45765/api/media-list"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Nginx reverse proxy for produktion
+  nginx:
+    image: nginx:alpine
+    container_name: magion-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker-data/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - infoskaerm
+    networks:
+      - devserver_dev_network
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  devserver_dev_network:
+    external: true
+
+volumes:
+  db-data:
+  uploads-data:
+  optimized-data:

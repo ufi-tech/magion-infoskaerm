@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  infoskaerm:
+    build: .
+    container_name: efterskolen-play-infoskaerm
+    # Ingen port mapping - proxy manager håndterer dette
+    expose:
+      - "45764"
+    volumes:
+      # Persistent data storage
+      - ./docker-data/db:/app/data
+      - ./docker-data/uploads:/app/uploads
+      - ./docker-data/optimized:/app/optimized
+      - ./docker-data/originals:/app/originals
+      
+      # For development - kan fjernes i produktion
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+    environment:
+      - FLASK_ENV=production
+      - PORT=45764
+      - DATABASE_URL=sqlite:////app/data/infoskaerm.db
+      - SECRET_KEY=${SECRET_KEY:-efterskolen-play-2024-secret-key-change-this}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-efterskolen2024}
+      - TZ=Europe/Copenhagen
+    restart: unless-stopped
+    networks:
+      - devserver_dev_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:45764/api/media-list')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  devserver_dev_network:
+    external: true
+
+# ==========================================
+# DEVSERVER DEPLOYMENT INSTRUKTIONER
+# ==========================================
+#
+# Denne version bruger det eksisterende devserver_dev_network
+# og er designet til at fungere med din proxy manager
+#
+# DEPLOYMENT:
+# -----------
+# docker-compose -f docker-compose-devserver.yml up -d
+#
+# LOGS:
+# -----
+# docker-compose -f docker-compose-devserver.yml logs -f
+#
+# GENSTART:
+# ---------
+# docker-compose -f docker-compose-devserver.yml restart
+#
+# STOP:
+# -----
+# docker-compose -f docker-compose-devserver.yml down
+#
+# PROXY MANAGER KONFIGURATION:
+# ----------------------------
+# Container navn: efterskolen-play-infoskaerm
+# Port: 45764
+# Netværk: devserver_dev_network
+#
+# ADGANG VIA PROXY:
+# -----------------
+# Konfigurer din proxy manager til at pege på:
+# http://efterskolen-play-infoskaerm:45764

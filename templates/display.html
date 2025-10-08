@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Efterskolen Play - Infoskærm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            cursor: none;
+        }
+
+        #mediaContainer {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .media-item {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            display: none;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        .media-item.active {
+            display: block;
+        }
+
+        img.media-item {
+            object-fit: contain;
+        }
+
+        video.media-item {
+            object-fit: contain;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        #progressBar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.2);
+            z-index: 10;
+        }
+
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        #infoOverlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #infoOverlay.visible {
+            opacity: 1;
+        }
+
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .loader {
+            border: 5px solid #333;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .no-media {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingScreen">
+        <div class="loader"></div>
+        <div class="loading-text">Indlæser medier...</div>
+    </div>
+
+    <div id="mediaContainer"></div>
+    
+    <div id="progressBar">
+        <div id="progressFill"></div>
+    </div>
+
+    <div id="infoOverlay">
+        <span id="mediaInfo"></span>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <!-- Debug Console -->
+    <div id="debugConsole" style="position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 12px; width: 100%; height: 200px; overflow-y: scroll; z-index: 9999; display: none;">
+        <div id="debugLog"></div>
+    </div>
+
+    <script>
+        const mediaList = {{ media_list | safe }};
+
+        // Debug logging function (simplified - no server logging)
+        function debugLog(message) {
+            console.log(message);
+            const debugConsole = document.getElementById('debugConsole');
+            const debugLogDiv = document.getElementById('debugLog');
+            if (debugConsole && debugLogDiv) {
+                debugLogDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            }
+        }
+
+        // Show debug console with 'd' key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'd') {
+                const debugConsole = document.getElementById('debugConsole');
+                debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        class InfoScreen {
+            constructor() {
+                // Create a deep copy to prevent reference issues
+                this.mediaList = JSON.parse(JSON.stringify(mediaList));
+                Object.freeze(this.mediaList); // Prevent accidental modification
+                // debugLog(`InfoScreen initialized with ${this.mediaList.length} media files`);
+                this.currentIndex = 0;
+                this.mediaContainer = document.getElementById('mediaContainer');
+                this.progressFill = document.getElementById('progressFill');
+                this.infoOverlay = document.getElementById('infoOverlay');
+                this.mediaInfo = document.getElementById('mediaInfo');
+                this.loadingScreen = document.getElementById('loadingScreen');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.currentTimeout = null;
+                this.progressInterval = null;
+            }
+
+            async init() {
+                try {
+                    if (this.mediaList.length === 0) {
+                        this.showNoMedia();
+                        return;
+                    }
+
+                    // Start slideshow
+                    this.hideLoadingScreen();
+                    this.startSlideshow();
+
+                    // Keyboard controls
+                    this.setupKeyboardControls();
+
+                    // Auto-reload hver 6. time
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 6 * 60 * 60 * 1000);
+
+                } catch (error) {
+                    this.showError('Fejl: ' + error.message);
+                }
+            }
+
+            showNoMedia() {
+                this.hideLoadingScreen();
+                this.mediaContainer.innerHTML = '<div class="no-media">Ingen aktive mediefiler<br><small>Upload filer via administrationen</small></div>';
+            }
+
+            hideLoadingScreen() {
+                this.loadingScreen.style.display = 'none';
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.style.display = 'block';
+                console.error(message);
+            }
+
+            startSlideshow() {
+                this.showMedia(this.currentIndex);
+            }
+
+            showMedia(index) {
+                // Clear existing content
+                this.mediaContainer.innerHTML = '';
+
+                // Reset progress
+                this.stopProgress();
+
+                // Optional debug logging (comment out for production)
+                // debugLog(`ShowMedia called with index: ${index}, mediaList.length: ${this.mediaList.length}, currentIndex: ${this.currentIndex}`);
+
+                // Validate index
+                if (index < 0 || index >= this.mediaList.length) {
+                    debugLog(`INVALID INDEX! index: ${index}, mediaList.length: ${this.mediaList.length}`);
+                    debugLog(`RESET TRIGGERED - currentIndex was: ${this.currentIndex}`);
+                    this.currentIndex = 0;
+                    index = 0;
+                }
+                
+                const media = this.mediaList[index];
+                if (!media) {
+                    console.error('No media found at index:', index);
+                    return;
+                }
+                
+                let element;
+
+                if (media.type === 'image') {
+                    element = document.createElement('img');
+                    element.src = media.path;
+                    element.className = 'media-item active';
+                    
+                    // Handle image load errors
+                    element.onerror = () => {
+                        console.error('Could not load image:', media.path);
+                        this.nextMedia();
+                    };
+                    
+                    element.onload = () => {
+                        // Start progress bar after image loads
+                        this.startProgress(media.duration || 5000);
+                        
+                        // Next media after duration
+                        this.currentTimeout = setTimeout(() => {
+                            this.nextMedia();
+                        }, media.duration || 5000);
+                    };
+                    
+                } else if (media.type === 'video') {
+                    element = document.createElement('video');
+                    element.src = media.path;
+                    element.className = 'media-item active';
+                    element.autoplay = true;
+                    element.muted = true;
+                    element.playsInline = true;
+                    
+                    // When video ends, go to next
+                    element.onended = () => {
+                        this.nextMedia();
+                    };
+
+                    // Start progress based on video duration
+                    element.onloadedmetadata = () => {
+                        if (element.duration && !isNaN(element.duration)) {
+                            this.startProgress(element.duration * 1000);
+                        } else {
+                            // Fallback duration for videos without metadata
+                            this.startProgress(30000);
+                        }
+                    };
+
+                    element.onerror = () => {
+                        console.error('Could not play video:', media.path);
+                        this.nextMedia();
+                    };
+                }
+
+                if (element) {
+                    this.mediaContainer.appendChild(element);
+                    this.updateInfo(media);
+                }
+            }
+
+            startProgress(duration) {
+                const startTime = Date.now();
+                this.progressFill.style.width = '0%';
+                
+                this.progressInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min((elapsed / duration) * 100, 100);
+                    this.progressFill.style.width = progress + '%';
+                    
+                    if (progress >= 100) {
+                        clearInterval(this.progressInterval);
+                    }
+                }, 100);
+            }
+
+            stopProgress() {
+                if (this.progressInterval) {
+                    clearInterval(this.progressInterval);
+                    this.progressInterval = null;
+                }
+                if (this.currentTimeout) {
+                    clearTimeout(this.currentTimeout);
+                    this.currentTimeout = null;
+                }
+                this.progressFill.style.width = '0%';
+            }
+
+            updateInfo(media) {
+                const current = this.currentIndex + 1;
+                const total = this.mediaList.length;
+                const type = media.type === 'image' ? 'Billede' : 'Video';
+                this.mediaInfo.textContent = `${type} ${current}/${total}`;
+                
+                // Show info briefly
+                this.infoOverlay.classList.add('visible');
+                setTimeout(() => {
+                    this.infoOverlay.classList.remove('visible');
+                }, 3000);
+            }
+
+            nextMedia() {
+                if (this.mediaList.length === 0) {
+                    debugLog('ERROR: No media available');
+                    return;
+                }
+
+                // Guard against mediaList corruption
+                if (this.mediaList.length !== 48) {
+                    debugLog(`WARNING: mediaList.length changed from 48 to ${this.mediaList.length}!`);
+                    debugLog(`mediaList type: ${typeof this.mediaList}, Array.isArray: ${Array.isArray(this.mediaList)}`);
+                }
+
+                const oldIndex = this.currentIndex;
+                this.currentIndex = (this.currentIndex + 1) % this.mediaList.length;
+                // debugLog(`NextMedia: ${oldIndex} → ${this.currentIndex} (mediaList.length: ${this.mediaList.length})`);
+                this.showMedia(this.currentIndex);
+            }
+
+            previousMedia() {
+                if (this.mediaList.length === 0) {
+                    console.error('No media available');
+                    return;
+                }
+                this.currentIndex = (this.currentIndex - 1 + this.mediaList.length) % this.mediaList.length;
+                this.showMedia(this.currentIndex);
+            }
+
+            setupKeyboardControls() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowRight':
+                        case ' ':
+                            this.stopProgress();
+                            this.nextMedia();
+                            break;
+                        case 'ArrowLeft':
+                            this.stopProgress();
+                            this.previousMedia();
+                            break;
+                        case 'i':
+                            this.infoOverlay.classList.toggle('visible');
+                            break;
+                        case 'Escape':
+                            if (document.fullscreenElement) {
+                                document.exitFullscreen();
+                            } else {
+                                document.documentElement.requestFullscreen();
+                            }
+                            break;
+                    }
+                });
+            }
+        }
+
+        // Global reference to screen instance
+        let currentScreen = null;
+
+        // Start when page loads
+        window.addEventListener('load', () => {
+            // debugLog('PAGE LOADED - Starting InfoScreen');
+            currentScreen = new InfoScreen();
+            currentScreen.init();
+        });
+
+        // Check for redirect override periodically (every 30 seconds)
+        setInterval(() => {
+            fetch('/api/redirect-check')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.redirect_enabled && data.redirect_url) {
+                        console.log('Redirect aktiveret - reloader for at aktivere redirect');
+                        window.location.reload(); // Reload så server-side redirect tager over
+                    }
+                })
+                .catch(error => {
+                    console.error('Redirect check fejlede:', error);
+                });
+        }, 30000); // Check every 30 seconds
+
+        // Check for media list updates periodically
+        setInterval(() => {
+            fetch('/api/media-list')
+                .then(response => response.json())
+                .then(newList => {
+                    // Compare with current screen's media list, not the global constant
+                    if (currentScreen) {
+                        // Only check lengths first - much more reliable than JSON stringify
+                        if (newList.length !== currentScreen.mediaList.length) {
+                            console.log(`Media count changed: ${currentScreen.mediaList.length} → ${newList.length} - reloading`);
+                            window.location.reload();
+                            return;
+                        }
+
+                        // If lengths match, do a more detailed comparison
+                        let hasChanged = false;
+                        for (let i = 0; i < newList.length; i++) {
+                            if (newList[i].path !== currentScreen.mediaList[i].path ||
+                                newList[i].type !== currentScreen.mediaList[i].type ||
+                                newList[i].duration !== currentScreen.mediaList[i].duration) {
+                                hasChanged = true;
+                                break;
+                            }
+                        }
+
+                        if (hasChanged) {
+                            console.log('Media list content changed - reloading');
+                            window.location.reload();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking for updates:', error);
+                });
+        }, 60000); // Check every minute
+    </script>
+</body>
+</html>

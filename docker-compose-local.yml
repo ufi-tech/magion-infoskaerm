@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  infoskaerm:
+    # Byg image lokalt fra Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: efterskolen-play-infoskaerm
+    ports:
+      - "45764:45764"
+    volumes:
+      # Persistent data storage
+      - ./docker-data/db:/app/data
+      - ./docker-data/uploads:/app/uploads
+      - ./docker-data/optimized:/app/optimized
+      - ./docker-data/originals:/app/originals
+
+      # For development
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+    environment:
+      - FLASK_ENV=production
+      - PORT=45764
+      - DATABASE_URL=sqlite:////app/data/infoskaerm.db
+      - SECRET_KEY=${SECRET_KEY:-efterskolen-play-2024-secret-key-change-this}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-efterskolen2024}
+      - TZ=Europe/Copenhagen
+    restart: unless-stopped
+    networks:
+      - infoskaerm-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:45764/api/media-list"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  infoskaerm-net:
+    driver: bridge
+
+# ==========================================
+# SYNOLOGY NAS - LOKAL BUILD INSTRUKTIONER
+# ==========================================
+#
+# DENNE VERSION BYGGER IMAGE LOKALT
+# og undgår authentication problemer
+#
+# TRIN 1: KOPIER FILER TIL SYNOLOGY
+# ----------------------------------
+# Kopier HELE projekt mappen til:
+# /volume1/docker/efterskolenplay/
+#
+# Vigtige filer der SKAL være med:
+# - Dockerfile
+# - app_docker.py
+# - requirements.txt
+# - templates/ (hele mappen)
+# - static/ (hele mappen)
+# - infoskaerm.html
+#
+# TRIN 2: SSH TIL SYNOLOGY
+# ------------------------
+# ssh admin@[synology-ip]
+# cd /volume1/docker/efterskolenplay
+#
+# TRIN 3: BYG IMAGE LOKALT
+# ------------------------
+# sudo docker build -t efterskolen-play .
+#
+# TRIN 4: START CONTAINER
+# -----------------------
+# sudo docker-compose -f docker-compose-local.yml up -d
+#
+# TRIN 5: TJEK STATUS
+# -------------------
+# sudo docker-compose -f docker-compose-local.yml logs -f
+#
+# ADGANG:
+# -------
+# http://[synology-ip]:45764/admin
+# http://[synology-ip]:45764/
+#
+# FEJLFINDING:
+# ------------
+# Hvis build fejler, prøv at bygge med mere verbose output:
+# sudo docker build -t efterskolen-play . --no-cache --progress=plain
+#
+# Genstart container:
+# sudo docker-compose -f docker-compose-local.yml restart
+#
+# Stop og slet:
+# sudo docker-compose -f docker-compose-local.yml down

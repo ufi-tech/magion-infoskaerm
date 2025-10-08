@@ -1,0 +1,67 @@
+version: '3.8'
+
+# OFFLINE VERSION - Ingen eksterne images
+# Perfekt til Synology med authentication problemer
+
+services:
+  infoskaerm:
+    # Bruger lokalt bygget image
+    image: efterskolen-play:latest
+    container_name: efterskolen-play-infoskaerm
+    ports:
+      - "45764:45764"
+    volumes:
+      # Data persistence
+      - ./docker-data/db:/app/data
+      - ./docker-data/uploads:/app/uploads
+      - ./docker-data/optimized:/app/optimized
+      - ./docker-data/originals:/app/originals
+    environment:
+      - FLASK_ENV=production
+      - PORT=45764
+      - DATABASE_URL=sqlite:////app/data/infoskaerm.db
+      - SECRET_KEY=${SECRET_KEY:-efterskolen-play-2024-secret-key-change-this}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-efterskolen2024}
+      - TZ=Europe/Copenhagen
+    restart: unless-stopped
+    networks:
+      - infoskaerm-net
+
+networks:
+  infoskaerm-net:
+    driver: bridge
+
+# ========================================
+# KOMPLET OFFLINE INSTALLATION
+# ========================================
+#
+# Denne metode fungerer UDEN internet/Docker Hub
+#
+# STEG 1: Byg image lokalt først
+# -------------------------------
+# sudo docker build -f Dockerfile.simple -t efterskolen-play:latest . --no-cache
+#
+# STEG 2: Verificer image er bygget
+# ----------------------------------
+# sudo docker images | grep efterskolen-play
+#
+# STEG 3: Start container
+# -----------------------
+# sudo docker-compose -f docker-compose-offline.yml up -d
+#
+# STEG 4: Tjek logs
+# -----------------
+# sudo docker-compose -f docker-compose-offline.yml logs -f
+#
+# ADGANG:
+# -------
+# http://[synology-ip]:45764/
+#
+# GENSTART:
+# ---------
+# sudo docker-compose -f docker-compose-offline.yml restart
+#
+# STOP:
+# -----
+# sudo docker-compose -f docker-compose-offline.yml down
