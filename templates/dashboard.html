@@ -198,6 +198,48 @@
 {% block content %}
 <div class="dashboard-grid">
     <div class="main-content">
+        <!-- SCREEN MANAGEMENT SECTION -->
+        <div class="upload-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: white; margin: 0;">📺 Skærmstyring</h2>
+                <button onclick="openCreateScreenModal()" class="btn" style="background: white; color: #667eea;">+ Opret Ny Skærm</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                {% for screen in screens %}
+                <div class="screen-card" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <h3 style="margin: 0 0 5px 0; color: white;">{{ screen.name }}</h3>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.9;">{{ screen.location or 'Ingen lokation' }}</p>
+                        </div>
+                        <div class="toggle-switch {% if screen.active %}active{% endif %}" onclick="toggleScreen({{ screen.id }}, this)" style="margin: 0;"></div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 10px 0; font-family: monospace; font-size: 11px;">
+                        <div style="opacity: 0.8;">Pairing kode:</div>
+                        <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">{{ screen.pairing_code }}</div>
+                    </div>
+
+                    <div style="display: flex; gap: 5px; margin-top: 10px;">
+                        <button onclick="showQRCode({{ screen.id }})" class="btn btn-small" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">📱 QR</button>
+                        <button onclick="copyScreenURL('{{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}')" class="btn btn-small" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">🔗 Kopi URL</button>
+                        <button onclick="assignMedia({{ screen.id }})" class="btn btn-small" style="flex: 1; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">📁 Media</button>
+                    </div>
+
+                    <div style="margin-top: 8px; text-align: center;">
+                        <a href="{{ url_for('display_screen', screen_uuid=screen.uuid) }}" target="_blank" style="color: white; text-decoration: none; font-size: 12px; opacity: 0.8;">🔗 {{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}</a>
+                    </div>
+                </div>
+                {% else %}
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; opacity: 0.8;">
+                    <p style="margin: 0; font-size: 16px;">Ingen skærme oprettet endnu</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px;">Klik på "Opret Ny Skærm" for at komme i gang</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
         <div class="upload-section">
             <h2>Upload nye filer</h2>
             <form method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data" class="upload-form">
@@ -367,7 +409,147 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Modals -->
+<div id="createScreenModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+        <h2 style="margin-top: 0;">Opret Ny Skærm</h2>
+        <form method="POST" action="{{ url_for('create_screen') }}">
+            <div class="form-group">
+                <label>Navn *</label>
+                <input type="text" name="name" required placeholder="fx. Reception Skærm">
+            </div>
+            <div class="form-group">
+                <label>Lokation</label>
+                <input type="text" name="location" placeholder="fx. Hovedindgang">
+            </div>
+            <div class="form-group">
+                <label>Beskrivelse</label>
+                <textarea name="description" rows="3" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn" style="flex: 1; background: #667eea;">Opret Skærm</button>
+                <button type="button" onclick="closeCreateScreenModal()" class="btn" style="flex: 1; background: #cbd5e0; color: #2d3748;">Annuller</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="qrModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; text-align: center;">
+        <h2 style="margin-top: 0;">Skærm QR Kode</h2>
+        <div id="qrCodeContainer"></div>
+        <p id="screenURL" style="word-break: break-all; font-size: 12px; color: #718096; margin: 15px 0;"></p>
+        <button onclick="closeQRModal()" class="btn" style="width: 100%;">Luk</button>
+    </div>
+</div>
+
+<div id="mediaAssignModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <h2 style="margin-top: 0;">Tildel Media til Skærm</h2>
+        <div id="mediaSelectionList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 20px 0;">
+            {% for media in media_files %}
+            <div class="media-select-item" data-id="{{ media.id }}" style="border: 2px solid #cbd5e0; border-radius: 8px; padding: 10px; cursor: pointer; text-align: center;" onclick="toggleMediaSelection(this)">
+                {% if media.media_type == 'image' %}
+                    <img src="/media/{{ media.filename }}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;">
+                {% else %}
+                    <video src="/media/{{ media.filename }}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;"></video>
+                {% endif %}
+                <p style="margin: 5px 0 0 0; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ media.original_filename }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button onclick="saveMediaAssignment()" class="btn" style="flex: 1; background: #667eea;">Gem</button>
+            <button onclick="closeMediaAssignModal()" class="btn" style="flex: 1; background: #cbd5e0; color: #2d3748;">Annuller</button>
+        </div>
+    </div>
+</div>
+
 <script>
+let currentScreenIdForMedia = null;
+
+function openCreateScreenModal() {
+    document.getElementById('createScreenModal').style.display = 'flex';
+}
+
+function closeCreateScreenModal() {
+    document.getElementById('createScreenModal').style.display = 'none';
+}
+
+function toggleScreen(screenId, element) {
+    fetch(`/screen/${screenId}/toggle`)
+        .then(response => response.json())
+        .then(data => {
+            element.classList.toggle('active', data.active);
+        });
+}
+
+function showQRCode(screenId) {
+    fetch(`/screen/${screenId}/qr`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('qrCodeContainer').innerHTML = `<img src="${data.qr_code}" style="max-width: 100%;">`;
+            document.getElementById('screenURL').textContent = data.url;
+            document.getElementById('qrModal').style.display = 'flex';
+        });
+}
+
+function closeQRModal() {
+    document.getElementById('qrModal').style.display = 'none';
+}
+
+function copyScreenURL(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        alert('URL kopieret til udklipsholder!');
+    });
+}
+
+function assignMedia(screenId) {
+    currentScreenIdForMedia = screenId;
+    // Reset selections
+    document.querySelectorAll('.media-select-item').forEach(item => {
+        item.style.borderColor = '#cbd5e0';
+        item.style.background = 'white';
+    });
+    document.getElementById('mediaAssignModal').style.display = 'flex';
+}
+
+function closeMediaAssignModal() {
+    document.getElementById('mediaAssignModal').style.display = 'none';
+    currentScreenIdForMedia = null;
+}
+
+function toggleMediaSelection(element) {
+    if (element.style.borderColor === 'rgb(102, 126, 234)') {
+        element.style.borderColor = '#cbd5e0';
+        element.style.background = 'white';
+    } else {
+        element.style.borderColor = '#667eea';
+        element.style.background = '#f0f5ff';
+    }
+}
+
+function saveMediaAssignment() {
+    if (!currentScreenIdForMedia) return;
+
+    const selectedMedia = Array.from(document.querySelectorAll('.media-select-item'))
+        .filter(item => item.style.borderColor === 'rgb(102, 126, 234)')
+        .map(item => parseInt(item.dataset.id));
+
+    fetch(`/screen/${currentScreenIdForMedia}/assign-media`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({media_ids: selectedMedia})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Media tildelt succesfuldt!');
+            closeMediaAssignModal();
+        }
+    });
+}
+
 // Sortable grid
 let draggedElement = null;
 

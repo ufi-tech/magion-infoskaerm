@@ -27,7 +27,7 @@ services:
     networks:
       - devserver_dev_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:45765/api/media-list"]
+      test: ["CMD", "python", "-c", "import requests; r = requests.get('http://localhost:45765/health'); exit(0 if r.status_code == 200 else 1)"]
       interval: 30s
       timeout: 3s
       retries: 3

@@ -1,14 +1,19 @@
 import os
 import json
 import shutil
+import uuid
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
+from flask_uuid import FlaskUUID
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from PIL import Image
 from moviepy.editor import VideoFileClip
+import qrcode
+from io import BytesIO
+import base64
 import logging
 
 # Setup logging
@@ -16,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+FlaskUUID(app)
 
 # Configuration from environment variables
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'magion-2024-secret-key-change-this')
@@ -54,6 +60,7 @@ class Media(db.Model):
     order_index = db.Column(db.Integer, default=0)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    is_global = db.Column(db.Boolean, default=True)  # Global media shown on all screens
 
 class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -61,12 +68,54 @@ class Settings(db.Model):
     value = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# Association table for Screen <-> Media (many-to-many)
+screen_media = db.Table('screen_media',
+    db.Column('screen_id', db.Integer, db.ForeignKey('screen.id'), primary_key=True),
+    db.Column('media_id', db.Integer, db.ForeignKey('media.id'), primary_key=True),
+    db.Column('order_index', db.Integer, default=0)
+)
+
+class Screen(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    location = db.Column(db.String(200))
+    active = db.Column(db.Boolean, default=True)
+    pairing_code = db.Column(db.String(6), unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    # Relationship to media
+    media_items = db.relationship('Media', secondary=screen_media, backref='screens')
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def generate_pairing_code():
+    """Generate a unique 6-character pairing code"""
+    import random
+    import string
+    while True:
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        if not Screen.query.filter_by(pairing_code=code).first():
+            return code
+
+def generate_qr_code(data):
+    """Generate QR code and return as base64 image"""
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return f"data:image/png;base64,{img_str}"
 
 def optimize_image(input_path, output_path):
     """Optimize image to EXACTLY 1920x1080 with black background"""
@@ -170,13 +219,15 @@ def logout():
 @login_required
 def dashboard():
     media_files = Media.query.order_by(Media.order_index, Media.uploaded_at.desc()).all()
-    
+    screens = Screen.query.order_by(Screen.created_at.desc()).all()
+
     settings = {}
     for setting in Settings.query.all():
         settings[setting.key] = setting.value
-    
-    return render_template('dashboard.html', 
-                         media_files=media_files, 
+
+    return render_template('dashboard.html',
+                         media_files=media_files,
+                         screens=screens,
                          settings=settings,
                          user=current_user)
 
@@ -375,6 +426,128 @@ def redirect_check():
         'redirect_enabled': redirect_enabled.value == 'True' if redirect_enabled else False,
         'redirect_url': redirect_url.value if redirect_url else ''
     })
+
+# ========== SCREEN MANAGEMENT ROUTES ==========
+
+@app.route('/screen/create', methods=['POST'])
+@login_required
+def create_screen():
+    """Create a new screen with unique UUID and pairing code"""
+    name = request.form.get('name', 'Ny skærm')
+    description = request.form.get('description', '')
+    location = request.form.get('location', '')
+
+    screen = Screen(
+        name=name,
+        description=description,
+        location=location,
+        pairing_code=generate_pairing_code(),
+        created_by=current_user.id
+    )
+
+    db.session.add(screen)
+    db.session.commit()
+
+    flash(f'Skærm "{name}" oprettet succesfuldt!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/screen/<int:screen_id>/delete')
+@login_required
+def delete_screen(screen_id):
+    """Delete a screen"""
+    screen = Screen.query.get_or_404(screen_id)
+    db.session.delete(screen)
+    db.session.commit()
+
+    flash('Skærm slettet', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/screen/<int:screen_id>/toggle')
+@login_required
+def toggle_screen(screen_id):
+    """Toggle screen active status"""
+    screen = Screen.query.get_or_404(screen_id)
+    screen.active = not screen.active
+    db.session.commit()
+
+    return jsonify({'active': screen.active})
+
+@app.route('/screen/<int:screen_id>/qr')
+@login_required
+def screen_qr_code(screen_id):
+    """Generate QR code for screen URL"""
+    screen = Screen.query.get_or_404(screen_id)
+    screen_url = request.host_url.rstrip('/') + url_for('display_screen', screen_uuid=screen.uuid)
+    qr_code = generate_qr_code(screen_url)
+
+    return jsonify({'qr_code': qr_code, 'url': screen_url})
+
+@app.route('/screen/<int:screen_id>/assign-media', methods=['POST'])
+@login_required
+def assign_media_to_screen(screen_id):
+    """Assign media files to a screen"""
+    screen = Screen.query.get_or_404(screen_id)
+    media_ids = request.json.get('media_ids', [])
+
+    # Clear existing assignments
+    screen.media_items.clear()
+
+    # Add new assignments
+    for idx, media_id in enumerate(media_ids):
+        media = Media.query.get(media_id)
+        if media:
+            screen.media_items.append(media)
+
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/screen/<uuid:screen_uuid>')
+def display_screen(screen_uuid):
+    """Display screen by UUID - shows screen-specific content"""
+    screen = Screen.query.filter_by(uuid=str(screen_uuid)).first_or_404()
+
+    if not screen.active:
+        return render_template('display.html',
+                             media_list=json.dumps([]),
+                             screen_name=screen.name,
+                             screen_inactive=True)
+
+    # Get screen-specific media first
+    screen_media = screen.media_items
+
+    # If no screen-specific media, use global media
+    if not screen_media:
+        screen_media = Media.query.filter_by(active=True, is_global=True).order_by(
+            Media.order_index, Media.uploaded_at.desc()
+        ).all()
+
+    media_list = []
+    for media in screen_media:
+        if media.active:
+            media_list.append({
+                'type': media.media_type,
+                'path': f'/media/{media.filename}',
+                'duration': media.duration
+            })
+
+    return render_template('display.html',
+                         media_list=json.dumps(media_list),
+                         screen_name=screen.name,
+                         screen_uuid=str(screen_uuid))
+
+@app.route('/screen/pair', methods=['POST'])
+def pair_screen():
+    """Pair a screen using pairing code"""
+    code = request.json.get('code', '').upper()
+    screen = Screen.query.filter_by(pairing_code=code).first()
+
+    if screen:
+        return jsonify({
+            'success': True,
+            'screen_url': url_for('display_screen', screen_uuid=screen.uuid, _external=True)
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Ugyldig pairing kode'}), 404
 
 def init_db():
     """Initialize database with default admin user"""

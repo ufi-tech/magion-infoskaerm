@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Efterskolen Play - Infoskærm</title>
+    <title>{% if screen_name %}{{ screen_name }}{% else %}Efterskolen Play - Infoskærm{% endif %}</title>
     <style>
         * {
             margin: 0;
@@ -147,6 +147,39 @@
             font-size: 24px;
             text-align: center;
         }
+
+        #screenIdentifier {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(102, 126, 234, 0.95);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        #screenIdentifier.visible {
+            opacity: 1;
+        }
+
+        .screen-inactive-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 2000;
+        }
     </style>
 </head>
 <body>
@@ -166,6 +199,20 @@
     </div>
 
     <div class="error-message" id="errorMessage"></div>
+
+    {% if screen_name %}
+    <div id="screenIdentifier">
+        📺 {{ screen_name }}
+        {% if screen_uuid %}<br><small style="font-size: 11px; opacity: 0.8;">UUID: {{ screen_uuid[:8] }}</small>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if screen_inactive %}
+    <div class="screen-inactive-message">
+        <h2>⚠️ Skærm Inaktiv</h2>
+        <p style="margin-top: 10px;">Denne skærm er deaktiveret i administrationen</p>
+    </div>
+    {% endif %}
 
     <!-- Debug Console -->
     <div id="debugConsole" style="position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-size: 12px; width: 100%; height: 200px; overflow-y: scroll; z-index: 9999; display: none;">
@@ -191,6 +238,16 @@
             if (e.key === 'd') {
                 const debugConsole = document.getElementById('debugConsole');
                 debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
+            }
+            // Show screen identifier with 's' key
+            if (e.key === 's') {
+                const screenId = document.getElementById('screenIdentifier');
+                if (screenId) {
+                    screenId.classList.add('visible');
+                    setTimeout(() => {
+                        screenId.classList.remove('visible');
+                    }, 5000);
+                }
             }
         });
 
