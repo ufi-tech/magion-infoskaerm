@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ screen_name }} - Aktivitetsplan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeIn 0.8s;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header .date {
+            font-size: 28px;
+            opacity: 0.9;
+        }
+
+        .activities-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .activity-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: slideIn 0.6s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .activity-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .activity-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .activity-time {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .activity-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .activity-location {
+            font-size: 14px;
+            color: #718096;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .activity-user {
+            font-size: 13px;
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        .current-activity {
+            border: 3px solid #48bb78;
+            box-shadow: 0 0 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .current-activity::before {
+            background: #48bb78;
+        }
+
+        .current-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #48bb78;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            animation: pulse 2s infinite;
+        }
+
+        .no-activities {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            padding: 60px 20px;
+            grid-column: 1 / -1;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 32px;
+            padding: 100px 20px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .scroll-container {
+            animation: autoScroll 120s linear infinite;
+        }
+
+        @keyframes autoScroll {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-30%);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        /* Color variations for different locations */
+        .activity-card[data-location*="bassin"] .activity-time { color: #3182ce; }
+        .activity-card[data-location*="Fitness"] .activity-time { color: #e53e3e; }
+        .activity-card[data-location*="Arena"] .activity-time { color: #805ad5; }
+        .activity-card[data-location*="Sal"] .activity-time { color: #38a169; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 id="headerTitle">📅 Dagens Aktiviteter</h1>
+        <div class="date" id="currentDate"></div>
+    </div>
+
+    <div class="activities-container" id="activitiesContainer">
+        <div class="loading">🔄 Indlæser aktiviteter...</div>
+    </div>
+
+    <script>
+        const jsonData = {{ json_data|safe }};
+        const template = '{{ json_template }}';
+
+        function displayActivities() {
+            const container = document.getElementById('activitiesContainer');
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+
+            if (!jsonData || jsonData.length === 0) {
+                container.innerHTML = '<div class="no-activities">📭 Ingen aktiviteter i dag</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            // Extract date if available
+            let displayDate = 'I dag';
+            if (jsonData.length > 0 && jsonData[0].Dato) {
+                displayDate = jsonData[0].Dato;
+            }
+            document.getElementById('currentDate').textContent = displayDate;
+
+            jsonData.forEach((activity, index) => {
+                const card = document.createElement('div');
+                card.className = 'activity-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+
+                // Parse time
+                const fromTime = activity.FraTid || '';
+                const toTime = activity.TilTid || '';
+
+                // Check if activity is current
+                let isCurrent = false;
+                if (fromTime && toTime) {
+                    const [fromHour, fromMin] = fromTime.split(':').map(Number);
+                    const [toHour, toMin] = toTime.split(':').map(Number);
+                    const fromMinutes = fromHour * 60 + fromMin;
+                    const toMinutes = toHour * 60 + toMin;
+
+                    if (currentTime >= fromMinutes && currentTime < toMinutes) {
+                        isCurrent = true;
+                        card.classList.add('current-activity');
+                    }
+                }
+
+                // Set data attribute for color coding
+                if (activity.Område) {
+                    card.setAttribute('data-location', activity.Område);
+                }
+
+                let cardHTML = '';
+
+                if (isCurrent) {
+                    cardHTML += '<div class="current-badge">🔴 Nu</div>';
+                }
+
+                cardHTML += `
+                    <div class="activity-time">
+                        ⏰ ${fromTime} - ${toTime}
+                    </div>
+                    <div class="activity-title">
+                        ${activity.Titel || 'Aktivitet'}
+                    </div>
+                `;
+
+                if (activity.Område) {
+                    cardHTML += `
+                        <div class="activity-location">
+                            📍 ${activity.Område}
+                        </div>
+                    `;
+                }
+
+                if (activity.Bruger) {
+                    cardHTML += `
+                        <div class="activity-user">
+                            ${activity.Bruger}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = cardHTML;
+                container.appendChild(card);
+            });
+        }
+
+        // Initial display
+        displayActivities();
+
+        // Refresh data every 5 minutes
+        setInterval(() => {
+            console.log('🔄 Refreshing activity data...');
+            window.location.reload();
+        }, 5 * 60 * 1000);
+
+        // Update current time indicator every minute
+        setInterval(() => {
+            displayActivities();
+        }, 60 * 1000);
+
+        // Display current time
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('da-DK', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('headerTitle').textContent = `📅 Dagens Aktiviteter - ${timeStr}`;
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

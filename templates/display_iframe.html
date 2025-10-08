@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ screen_name }} - iFrame Display</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff6b6b;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            text-align: center;
+            padding: 40px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 10px;
+        }
+
+        .screen-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .screen-info:hover {
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        iframe {
+            animation: fadeIn 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">🔄 Indlæser...</div>
+
+    <iframe
+        id="contentFrame"
+        src="{{ iframe_url }}"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"
+        allow="autoplay; fullscreen"
+        loading="eager"
+        onload="onFrameLoad()"
+        onerror="onFrameError()">
+    </iframe>
+
+    <div class="screen-info">
+        🖼️ {{ screen_name }}
+    </div>
+
+    <script>
+        function onFrameLoad() {
+            console.log('✅ iFrame loaded successfully');
+            document.getElementById('loading').style.display = 'none';
+
+            // Show screen info briefly
+            const info = document.querySelector('.screen-info');
+            info.style.opacity = '1';
+            setTimeout(() => {
+                info.style.opacity = '0';
+            }, 3000);
+        }
+
+        function onFrameError() {
+            console.error('❌ iFrame failed to load');
+            document.getElementById('loading').innerHTML = `
+                <div class="error">
+                    ⚠️ Kunne ikke indlæse siden<br>
+                    <small>{{ iframe_url }}</small>
+                </div>
+            `;
+        }
+
+        // Auto-reload iframe every 24 hours to ensure fresh content
+        setInterval(() => {
+            console.log('🔄 Auto-refreshing iframe...');
+            const iframe = document.getElementById('contentFrame');
+            iframe.src = iframe.src;
+        }, 24 * 60 * 60 * 1000);
+
+        // Check for display mode changes every 30 seconds
+        setInterval(() => {
+            fetch('/api/redirect-check')
+                .then(response => response.json())
+                .then(data => {
+                    // If redirect settings changed, reload page
+                    if (data.redirect_enabled) {
+                        window.location.reload();
+                    }
+                })
+                .catch(error => console.log('Check failed:', error));
+        }, 30000);
+    </script>
+</body>
+</html>

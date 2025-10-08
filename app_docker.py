@@ -16,6 +16,7 @@ import qrcode
 from io import BytesIO
 import base64
 import logging
+import requests
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -106,6 +107,12 @@ class Screen(db.Model):
     # Redirect settings (per screen)
     redirect_enabled = db.Column(db.Boolean, default=False)
     redirect_url = db.Column(db.Text)
+
+    # Display mode settings (per screen)
+    display_mode = db.Column(db.String(20), default='media')  # 'media', 'redirect', 'iframe', 'json_api'
+    iframe_url = db.Column(db.Text)
+    json_api_url = db.Column(db.Text)
+    json_template = db.Column(db.String(50), default='schedule')  # 'schedule', 'custom'
 
     # Relationship to media through association object
     media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan')
@@ -684,11 +691,43 @@ def display_screen(screen_uuid):
     """Display screen by UUID - shows screen-specific content"""
     screen = Screen.query.filter_by(uuid=str(screen_uuid)).first_or_404()
 
-    # Check if redirect is enabled for this screen
+    # Check display mode and handle accordingly
+    display_mode = screen.display_mode or 'media'
+
+    # Legacy support: if redirect_enabled is True, use redirect mode
     if screen.redirect_enabled and screen.redirect_url:
-        logger.info(f"Screen {screen.name} redirect active - redirecting to: {screen.redirect_url}")
+        display_mode = 'redirect'
+
+    # Handle different display modes
+    if display_mode == 'redirect' and screen.redirect_url:
+        logger.info(f"Screen {screen.name} redirect mode - redirecting to: {screen.redirect_url}")
         return redirect(screen.redirect_url)
 
+    elif display_mode == 'iframe' and screen.iframe_url:
+        logger.info(f"Screen {screen.name} iframe mode - showing: {screen.iframe_url}")
+        return render_template('display_iframe.html',
+                             iframe_url=screen.iframe_url,
+                             screen_name=screen.name,
+                             screen_uuid=str(screen_uuid))
+
+    elif display_mode == 'json_api' and screen.json_api_url:
+        logger.info(f"Screen {screen.name} JSON API mode - fetching from: {screen.json_api_url}")
+        # Fetch JSON data
+        import requests
+        try:
+            response = requests.get(screen.json_api_url, timeout=10)
+            json_data = response.json() if response.status_code == 200 else []
+        except Exception as e:
+            logger.error(f"Failed to fetch JSON API: {e}")
+            json_data = []
+
+        return render_template('display_json.html',
+                             json_data=json.dumps(json_data),
+                             json_template=screen.json_template or 'schedule',
+                             screen_name=screen.name,
+                             screen_uuid=str(screen_uuid))
+
+    # Default: media rotation mode
     if not screen.active:
         return render_template('display.html',
                              media_list=json.dumps([]),
@@ -821,7 +860,7 @@ def update_screen_settings(screen_id):
     if 'description' in data:
         screen.description = data['description']
 
-    # Handle redirect settings
+    # Handle redirect settings (legacy support)
     if request.is_json:
         screen.redirect_enabled = data.get('redirect_enabled', False)
     else:
@@ -830,6 +869,19 @@ def update_screen_settings(screen_id):
 
     if 'redirect_url' in data:
         screen.redirect_url = data['redirect_url']
+
+    # Handle new display mode settings
+    if 'display_mode' in data:
+        screen.display_mode = data['display_mode']
+
+    if 'iframe_url' in data:
+        screen.iframe_url = data['iframe_url']
+
+    if 'json_api_url' in data:
+        screen.json_api_url = data['json_api_url']
+
+    if 'json_template' in data:
+        screen.json_template = data['json_template']
 
     db.session.commit()
 
@@ -991,7 +1043,34 @@ def init_db():
     """Initialize database with default admin user"""
     with app.app_context():
         db.create_all()
-        
+
+        # Add new columns to Screen table if they don't exist (migration)
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            screen_columns = [col['name'] for col in inspector.get_columns('screen')]
+
+            with db.engine.connect() as conn:
+                if 'display_mode' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN display_mode VARCHAR(20) DEFAULT 'media'"))
+                    logger.info("Added display_mode column to screen table")
+
+                if 'iframe_url' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN iframe_url TEXT"))
+                    logger.info("Added iframe_url column to screen table")
+
+                if 'json_api_url' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN json_api_url TEXT"))
+                    logger.info("Added json_api_url column to screen table")
+
+                if 'json_template' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN json_template VARCHAR(50) DEFAULT 'schedule'"))
+                    logger.info("Added json_template column to screen table")
+
+                conn.commit()
+        except Exception as e:
+            logger.warning(f"Migration warning (columns may already exist): {e}")
+
         # Create default admin user if not exists
         admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
         admin_password = os.environ.get('ADMIN_PASSWORD', 'magion2024')

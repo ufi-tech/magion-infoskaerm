@@ -481,8 +481,17 @@
             {% for screen in screens %}
             <button class="tab-button" onclick="switchTab('screen-{{ screen.id }}')">
                 📺 {{ screen.name }}
-                {% if screen.redirect_enabled %}
-                <span class="badge badge-warning">Redirect</span>
+                {% set display_mode = screen.display_mode or 'media' %}
+                {% if screen.redirect_enabled and screen.redirect_url %}
+                    {% set display_mode = 'redirect' %}
+                {% endif %}
+
+                {% if display_mode == 'redirect' %}
+                <span class="badge badge-warning">🔗 Redirect</span>
+                {% elif display_mode == 'iframe' %}
+                <span class="badge badge-warning">🖼️ iFrame</span>
+                {% elif display_mode == 'json_api' %}
+                <span class="badge badge-warning">📊 JSON API</span>
                 {% elif screen.media_items|length > 0 %}
                 <span class="badge badge-success">{{ screen.media_items|length }}</span>
                 {% else %}
@@ -609,21 +618,89 @@
                     </div>
 
                     <div class="redirect-section">
-                        <h3 style="color: white; margin: 0 0 15px 0;">🔗 URL Redirect</h3>
-                        <form method="POST" action="{{ url_for('update_screen_settings', screen_id=screen.id) }}">
-                            <div class="form-group">
-                                <label style="display: flex; align-items: center; color: white;">
-                                    <input type="checkbox" name="redirect_enabled" {% if screen.redirect_enabled %}checked{% endif %}>
-                                    <span>Aktiver Redirect</span>
-                                </label>
+                        <h3 style="color: white; margin: 0 0 15px 0;">🎯 Display Mode</h3>
+                        <form method="POST" action="{{ url_for('update_screen_settings', screen_id=screen.id) }}" id="displayModeForm{{ screen.id }}">
+                            {% set current_mode = screen.display_mode or 'media' %}
+                            {% if screen.redirect_enabled and screen.redirect_url %}
+                                {% set current_mode = 'redirect' %}
+                            {% endif %}
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label style="color: white; margin-bottom: 10px; display: block; font-weight: 600;">Vælg visningstype:</label>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                        <input type="radio" name="display_mode" value="media" {% if current_mode == 'media' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
+                                        <span>📺 Media Rotation (billeder/videoer)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                        <input type="radio" name="display_mode" value="redirect" {% if current_mode == 'redirect' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
+                                        <span>🔗 URL Redirect</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                        <input type="radio" name="display_mode" value="iframe" {% if current_mode == 'iframe' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
+                                        <span>🖼️ iFrame (vis ekstern side)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                        <input type="radio" name="display_mode" value="json_api" {% if current_mode == 'json_api' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
+                                        <span>📊 JSON API (hent data)</span>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label style="color: white;">Destination URL</label>
+
+                            <!-- Redirect URL field -->
+                            <div class="form-group mode-field mode-redirect{{ screen.id }}" style="display: none;">
+                                <label style="color: white;">🔗 Redirect URL</label>
                                 <input type="url" name="redirect_url" value="{{ screen.redirect_url or '' }}" placeholder="https://example.com">
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Skærmen viderestiller til denne URL</div>
                             </div>
+
+                            <!-- iFrame URL field -->
+                            <div class="form-group mode-field mode-iframe{{ screen.id }}" style="display: none;">
+                                <label style="color: white;">🖼️ iFrame URL</label>
+                                <input type="url" name="iframe_url" value="{{ screen.iframe_url or '' }}" placeholder="https://example.com">
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vis ekstern hjemmeside i fuld skærm</div>
+                            </div>
+
+                            <!-- JSON API fields -->
+                            <div class="mode-field mode-json_api{{ screen.id }}" style="display: none;">
+                                <div class="form-group">
+                                    <label style="color: white;">📊 JSON API URL</label>
+                                    <input type="url" name="json_api_url" value="{{ screen.json_api_url or '' }}" placeholder="https://api.example.com/data">
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">URL til JSON data (f.eks. aktivitetsplan)</div>
+                                </div>
+                                <div class="form-group">
+                                    <label style="color: white;">🎨 Display Template</label>
+                                    <select name="json_template" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+                                        <option value="schedule" {% if screen.json_template == 'schedule' %}selected{% endif %}>Aktivitetsplan</option>
+                                        <option value="custom" {% if screen.json_template == 'custom' %}selected{% endif %}>Custom (simpel visning)</option>
+                                    </select>
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Hvordan data skal vises</div>
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn" style="background: white; color: #667eea; width: 100%;">💾 Gem Indstillinger</button>
                         </form>
                     </div>
+
+                    <script>
+                    function toggleDisplayModeFields{{ screen.id }}() {
+                        const form = document.getElementById('displayModeForm{{ screen.id }}');
+                        const selectedMode = form.querySelector('input[name="display_mode"]:checked').value;
+
+                        // Hide all mode-specific fields
+                        form.querySelectorAll('.mode-field').forEach(field => {
+                            field.style.display = 'none';
+                        });
+
+                        // Show fields for selected mode
+                        form.querySelectorAll('.mode-' + selectedMode + '{{ screen.id }}').forEach(field => {
+                            field.style.display = 'block';
+                        });
+                    }
+
+                    // Initialize on page load
+                    toggleDisplayModeFields{{ screen.id }}();
+                    </script>
                 </div>
 
                 <div>
