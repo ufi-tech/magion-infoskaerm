@@ -504,9 +504,10 @@
 
                 <div>
                     <div class="section">
-                        <h3>🎬 Media på {{ screen.name }} ({{ screen.media_items|length }} filer)</h3>
+                        <h3>🎬 Media på {{ screen.name }} ({{ screen.media_associations|length }} filer)</h3>
                         <div class="media-grid" id="screenMediaGrid{{ screen.id }}">
-                            {% for media in screen.media_items %}
+                            {% for assoc in screen.media_associations %}
+                            {% set media = assoc.media %}
                             <div class="media-card">
                                 {% if media.media_type == 'image' %}
                                     <img src="/media/{{ media.filename }}" class="media-preview">
@@ -515,6 +516,18 @@
                                 {% endif %}
                                 <div class="media-info">
                                     <div class="media-title">{{ media.original_filename }}</div>
+                                    <div style="font-size: 10px; color: #718096; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                                        ⏱️ Varighed:
+                                        <input type="number"
+                                               class="duration-input"
+                                               value="{{ assoc.duration if assoc.duration else media.duration }}"
+                                               onchange="updateScreenMediaDuration({{ screen.id }}, {{ media.id }}, this.value)"
+                                               style="width: 60px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 3px; font-size: 10px;">
+                                        ms
+                                        {% if assoc.duration %}
+                                        <span style="color: #667eea;" title="Custom duration for this screen">🎯</span>
+                                        {% endif %}
+                                    </div>
                                     {% if media.expire_at %}
                                     <div style="font-size: 10px; color: #ed8936; margin-top: 4px;">
                                         ⏰ {{ media.expire_at.strftime('%d/%m %H:%M') }}
@@ -530,7 +543,7 @@
                             </div>
                             {% endfor %}
                         </div>
-                        {% if screen.media_items|length == 0 %}
+                        {% if screen.media_associations|length == 0 %}
                         <div class="empty-state">
                             <div class="empty-state-icon">📭</div>
                             <p>Ingen media uploadet til denne skærm</p>
@@ -792,6 +805,29 @@ function clearExpireSettings() {
             closeExpireModal();
             window.location.reload();
         }
+    });
+}
+
+function updateScreenMediaDuration(screenId, mediaId, duration) {
+    const durationValue = duration === '' ? null : parseInt(duration);
+
+    fetch(`/screen/${screenId}/media/${mediaId}/duration`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({duration: durationValue})
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            console.log(`Duration updated: ${result.duration}ms`);
+            // Optional: Show brief success indicator
+        } else {
+            alert('Fejl: ' + (result.error || 'Kunne ikke opdatere varighed'));
+        }
+    })
+    .catch(error => {
+        console.error('Error updating duration:', error);
+        alert('Netværksfejl ved opdatering af varighed');
     });
 }
 

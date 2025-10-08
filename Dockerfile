@@ -49,12 +49,12 @@ ENV PORT=45764
 # Skift til non-root bruger
 USER appuser
 
-# Health check
+# Health check - uses PORT environment variable
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; r = requests.get('http://localhost:45764/health'); exit(0 if r.status_code == 200 else 1)"
+    CMD python -c "import requests, os; port = os.getenv('PORT', '45764'); r = requests.get(f'http://localhost:{port}/health'); exit(0 if r.status_code == 200 else 1)"
 
 # Expose port
-EXPOSE 45764
+EXPOSE 45764 45765
 
 # Start command
 CMD ["python", "app.py"]

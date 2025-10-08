@@ -73,11 +73,13 @@ class Settings(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Association table for Screen <-> Media (many-to-many)
-screen_media = db.Table('screen_media',
-    db.Column('screen_id', db.Integer, db.ForeignKey('screen.id'), primary_key=True),
-    db.Column('media_id', db.Integer, db.ForeignKey('media.id'), primary_key=True),
-    db.Column('order_index', db.Integer, default=0)
-)
+# We need a proper association object to store screen-specific settings like duration
+class ScreenMedia(db.Model):
+    __tablename__ = 'screen_media'
+    screen_id = db.Column(db.Integer, db.ForeignKey('screen.id'), primary_key=True)
+    media_id = db.Column(db.Integer, db.ForeignKey('media.id'), primary_key=True)
+    order_index = db.Column(db.Integer, default=0)
+    duration = db.Column(db.Integer, nullable=True)  # Screen-specific duration override
 
 class Screen(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,8 +96,16 @@ class Screen(db.Model):
     redirect_enabled = db.Column(db.Boolean, default=False)
     redirect_url = db.Column(db.Text)
 
-    # Relationship to media
-    media_items = db.relationship('Media', secondary=screen_media, backref='screens')
+    # Relationship to media through association object
+    media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan')
+
+    @property
+    def media_items(self):
+        """Get media items for backwards compatibility"""
+        return [assoc.media for assoc in self.media_associations if assoc.media]
+
+# Add relationship to Media model too
+Media.screen_associations = db.relationship('ScreenMedia', backref='media', cascade='all, delete-orphan')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -587,16 +597,42 @@ def assign_media_to_screen(screen_id):
     media_ids = request.json.get('media_ids', [])
 
     # Clear existing assignments
-    screen.media_items.clear()
+    ScreenMedia.query.filter_by(screen_id=screen_id).delete()
 
     # Add new assignments
     for idx, media_id in enumerate(media_ids):
         media = Media.query.get(media_id)
         if media:
-            screen.media_items.append(media)
+            assoc = ScreenMedia(
+                screen_id=screen_id,
+                media_id=media_id,
+                order_index=idx
+            )
+            db.session.add(assoc)
 
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/screen/<int:screen_id>/media/<int:media_id>/duration', methods=['POST'])
+@login_required
+def update_screen_media_duration(screen_id, media_id):
+    """Update duration for specific media on a specific screen"""
+    assoc = ScreenMedia.query.filter_by(screen_id=screen_id, media_id=media_id).first_or_404()
+
+    data = request.json
+    duration = data.get('duration')
+
+    if duration is not None:
+        assoc.duration = int(duration)
+    else:
+        assoc.duration = None  # Use media default
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'duration': assoc.duration
+    })
 
 @app.route('/screen/<uuid:screen_uuid>')
 def display_screen(screen_uuid):
@@ -614,18 +650,27 @@ def display_screen(screen_uuid):
                              screen_name=screen.name,
                              screen_inactive=True)
 
-    # Get screen-specific media first
-    screen_media = screen.media_items
+    media_list = []
 
-    # If no screen-specific media, use global media
-    if not screen_media:
-        screen_media = Media.query.filter_by(active=True, is_global=True).order_by(
+    # Get screen-specific media with custom durations
+    if screen.media_associations:
+        for assoc in screen.media_associations:
+            media = assoc.media
+            if media and media.active:
+                # Use screen-specific duration if set, otherwise use media default
+                duration = assoc.duration if assoc.duration else media.duration
+                media_list.append({
+                    'type': media.media_type,
+                    'path': f'/media/{media.filename}',
+                    'duration': duration
+                })
+    else:
+        # No screen-specific media, use global media
+        global_media = Media.query.filter_by(active=True, is_global=True).order_by(
             Media.order_index, Media.uploaded_at.desc()
         ).all()
 
-    media_list = []
-    for media in screen_media:
-        if media.active:
+        for media in global_media:
             media_list.append({
                 'type': media.media_type,
                 'path': f'/media/{media.filename}',
@@ -703,8 +748,14 @@ def upload_screen_media(screen_id):
             db.session.add(media)
             db.session.flush()  # Get media.id
 
-            # Assign to screen
-            screen.media_items.append(media)
+            # Assign to screen using ScreenMedia association
+            current_max_order = db.session.query(db.func.max(ScreenMedia.order_index)).filter_by(screen_id=screen_id).scalar() or -1
+            assoc = ScreenMedia(
+                screen_id=screen_id,
+                media_id=media.id,
+                order_index=current_max_order + 1
+            )
+            db.session.add(assoc)
             uploaded_count += 1
 
     db.session.commit()
