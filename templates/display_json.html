@@ -13,39 +13,47 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #ffffff;
+            background: #f5f5f5;
             min-height: 100vh;
-            padding: 20px;
+            padding: 0;
             overflow-x: hidden;
         }
 
         .header {
-            text-align: center;
-            color: #000000;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #ffffff;
-            border-bottom: 4px solid #FF6B35;
+            background: #FF6B35;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             animation: fadeIn 0.8s;
+            margin-bottom: 20px;
         }
 
-        .header h1 {
-            font-size: 48px;
-            margin-bottom: 10px;
-            color: #000000;
+        .header-logo {
+            font-size: 42px;
+            color: white;
             font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
-        .header .date {
+        .header-datetime {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: white;
             font-size: 24px;
-            color: #FF6B35;
             font-weight: 600;
         }
 
-        .header .time {
-            font-size: 20px;
-            color: #666666;
-            margin-top: 8px;
+        .header-date {
+            font-size: 24px;
+        }
+
+        .header-time {
+            font-size: 32px;
+            font-weight: 700;
         }
 
         .activities-container {
@@ -209,28 +217,198 @@
             .activities-container {
                 grid-template-columns: 1fr;
             }
-            .header h1 {
-                font-size: 32px;
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 15px 20px;
             }
+            .header-logo {
+                font-size: 28px;
+            }
+            .header-datetime {
+                flex-direction: column;
+                gap: 5px;
+            }
+            .header-date {
+                font-size: 18px;
+            }
+            .header-time {
+                font-size: 24px;
+            }
+        }
+
+        .activities-wrapper {
+            padding: 20px;
+        }
+
+        .offline-indicator {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            background: #ff9800;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            display: none;
+            animation: slideInRight 0.5s;
+        }
+
+        .offline-indicator.show {
+            display: block;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .cached-badge {
+            background: #ff9800;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📅 Dagens Aktiviteter</h1>
-        <div class="date" id="currentDate"></div>
-        <div class="time" id="currentTime"></div>
+    <div class="offline-indicator" id="offlineIndicator">
+        📡 Offline mode - Viser cached data
     </div>
 
-    <div class="activities-container" id="activitiesContainer">
-        <div class="loading">🔄 Indlæser aktiviteter...</div>
+    <div class="header">
+        <div class="header-logo">
+            MAGION
+            <span id="cachedBadge" style="display: none;" class="cached-badge">Cached</span>
+        </div>
+        <div class="header-datetime">
+            <div class="header-date" id="currentDate">Indlæser...</div>
+            <div class="header-time" id="currentTime">--:--</div>
+        </div>
+    </div>
+
+    <div class="activities-wrapper">
+        <div class="activities-container" id="activitiesContainer">
+            <div class="loading">🔄 Indlæser aktiviteter...</div>
+        </div>
     </div>
 
     <script>
         let rawJsonData = {{ json_data|safe }};
         const template = '{{ json_template }}';
+        const screenUuid = '{{ screen_uuid }}';
+        let isOffline = false;
+        let usingCachedData = false;
 
         console.log('📦 Raw JSON data:', rawJsonData);
+
+        // Cache key for this screen
+        const CACHE_KEY = `json_data_${screenUuid}`;
+        const CACHE_TIME_KEY = `json_data_time_${screenUuid}`;
+
+        // Save JSON data to LocalStorage if we have new data
+        function cacheJsonData(data) {
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+                console.log('💾 JSON data cached successfully');
+            } catch (error) {
+                console.error('Failed to cache JSON data:', error);
+            }
+        }
+
+        // Load JSON data from LocalStorage
+        function loadCachedJsonData() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+
+                if (cached && cacheTime) {
+                    const data = JSON.parse(cached);
+                    const age = Date.now() - parseInt(cacheTime);
+                    const ageHours = Math.floor(age / (1000 * 60 * 60));
+
+                    console.log(`📦 Loaded cached data (${ageHours} hours old)`);
+                    return data;
+                }
+            } catch (error) {
+                console.error('Failed to load cached data:', error);
+            }
+            return null;
+        }
+
+        // Show/hide offline indicator
+        function showOfflineIndicator() {
+            const indicator = document.getElementById('offlineIndicator');
+            const badge = document.getElementById('cachedBadge');
+            if (indicator) {
+                indicator.classList.add('show');
+            }
+            if (badge) {
+                badge.style.display = 'inline-block';
+            }
+            isOffline = true;
+        }
+
+        function hideOfflineIndicator() {
+            const indicator = document.getElementById('offlineIndicator');
+            const badge = document.getElementById('cachedBadge');
+            if (indicator) {
+                indicator.classList.remove('show');
+            }
+            if (badge) {
+                badge.style.display = 'none';
+            }
+            isOffline = false;
+        }
+
+        // If we have fresh data from server, cache it
+        if (rawJsonData && Object.keys(rawJsonData).length > 0) {
+            cacheJsonData(rawJsonData);
+            usingCachedData = false;
+            console.log('✅ Using fresh data from server');
+        } else {
+            // Try to load from cache if no server data
+            const cached = loadCachedJsonData();
+            if (cached) {
+                rawJsonData = cached;
+                usingCachedData = true;
+                showOfflineIndicator();
+                console.log('📡 Using cached data (offline mode)');
+            }
+        }
+
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            console.log('🌐 Connection restored - reloading...');
+            hideOfflineIndicator();
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 Connection lost - switching to offline mode');
+            showOfflineIndicator();
+        });
+
+        // Check if we're offline at start
+        if (!navigator.onLine) {
+            showOfflineIndicator();
+        }
 
         function displayActivities() {
             const container = document.getElementById('activitiesContainer');
@@ -262,13 +440,6 @@
             }
 
             container.innerHTML = '';
-
-            // Extract and display date
-            let displayDate = 'I dag';
-            if (jsonData.length > 0) {
-                displayDate = jsonData[0].dato || jsonData[0].Dato || 'I dag';
-            }
-            document.getElementById('currentDate').textContent = displayDate;
 
             // Sort by time
             jsonData.sort((a, b) => {
@@ -354,17 +525,36 @@
             console.log('✅ Displayed', jsonData.length, 'activities');
         }
 
-        // Display current time
+        // Display current date and time
         function updateClock() {
             const now = new Date();
+
+            // Format time HH:MM:SS
             const timeStr = now.toLocaleTimeString('da-DK', {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
             });
-            const elem = document.getElementById('currentTime');
-            if (elem) {
-                elem.textContent = `🕐 ${timeStr}`;
+
+            // Format date - e.g., "Onsdag 8. oktober 2025"
+            const dateStr = now.toLocaleDateString('da-DK', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            // Capitalize first letter
+            const dateFormatted = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+            const timeElem = document.getElementById('currentTime');
+            const dateElem = document.getElementById('currentDate');
+
+            if (timeElem) {
+                timeElem.textContent = timeStr;
+            }
+            if (dateElem) {
+                dateElem.textContent = dateFormatted;
             }
         }
 
@@ -393,6 +583,19 @@
                     <small>${error.message}</small>
                 </div>
             `;
+        }
+
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered for offline support');
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
         }
     </script>
 </body>
