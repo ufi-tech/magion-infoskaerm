@@ -642,6 +642,7 @@
         const screenUuid = '{{ screen_uuid }}';
         let isOffline = false;
         let usingCachedData = false;
+        let lastRenderedData = null; // Track last rendered data to avoid unnecessary re-renders
 
         console.log('📦 Raw JSON data:', rawJsonData);
         console.log('🎨 Template:', template);
@@ -746,7 +747,7 @@
             return jsonData;
         }
 
-        function displayActivities() {
+        function displayActivities(forceRender = false) {
             const container = document.getElementById('activitiesContainer');
             const now = new Date();
             const currentTime = now.getHours() * 60 + now.getMinutes();
@@ -756,6 +757,7 @@
 
             if (!jsonData || jsonData.length === 0) {
                 container.innerHTML = '<div class="no-activities">📭 Ingen aktiviteter planlagt i dag</div>';
+                lastRenderedData = null;
                 return;
             }
 
@@ -777,6 +779,7 @@
 
             if (activeData.length === 0) {
                 container.innerHTML = '<div class="no-activities">📭 Ingen flere aktiviteter i dag</div>';
+                lastRenderedData = null;
                 return;
             }
 
@@ -787,25 +790,50 @@
                 return timeA.localeCompare(timeB);
             });
 
-            container.innerHTML = '';
+            // Check if data has changed - only re-render if needed
+            const dataHash = JSON.stringify(activeData.map(a => ({
+                title: a.titel || a.Titel,
+                from: a.fratid || a.FraTid,
+                to: a.tiltid || a.TilTid
+            })));
 
-            // Render based on template
-            switch(template) {
-                case 'table':
-                    renderTableTemplate(activeData, currentTime, container);
-                    break;
-                case 'timeline':
-                    renderTimelineTemplate(activeData, currentTime, container);
-                    break;
-                case 'compact':
-                    renderCompactTemplate(activeData, currentTime, container);
-                    break;
-                default: // 'schedule'
-                    renderScheduleTemplate(activeData, currentTime, container);
+            if (!forceRender && lastRenderedData === dataHash) {
+                console.log('⏭️ Data unchanged - skipping re-render');
+                return;
             }
 
-            // Scroll to top
-            window.scrollTo(0, 0);
+            lastRenderedData = dataHash;
+            console.log('🔄 Data changed - re-rendering');
+
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
+            const tempContainer = document.createElement('div');
+
+            // Render based on template into temp container
+            switch(template) {
+                case 'table':
+                    renderTableTemplate(activeData, currentTime, tempContainer);
+                    break;
+                case 'timeline':
+                    renderTimelineTemplate(activeData, currentTime, tempContainer);
+                    break;
+                case 'compact':
+                    renderCompactTemplate(activeData, currentTime, tempContainer);
+                    break;
+                default: // 'schedule'
+                    renderScheduleTemplate(activeData, currentTime, tempContainer);
+            }
+
+            // Replace content in one operation to minimize flicker
+            container.innerHTML = '';
+            while (tempContainer.firstChild) {
+                container.appendChild(tempContainer.firstChild);
+            }
+
+            // Only scroll to top on first render
+            if (forceRender) {
+                window.scrollTo(0, 0);
+            }
         }
 
         // Schedule Template (Cards)
@@ -1055,8 +1083,8 @@
         updateDateTime();
         setInterval(updateDateTime, 1000);
 
-        displayActivities();
-        setInterval(displayActivities, 60 * 1000); // Update every minute
+        displayActivities(true); // Force render on initial load
+        setInterval(displayActivities, 60 * 1000); // Update every minute (only re-render if data changed)
     </script>
 </body>
 </html>
