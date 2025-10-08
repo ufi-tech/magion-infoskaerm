@@ -794,6 +794,35 @@ def update_screen_settings(screen_id):
         flash('Skærm indstillinger opdateret', 'success')
         return redirect(url_for('dashboard'))
 
+@app.route('/screen/<int:screen_id>/edit', methods=['POST'])
+@login_required
+def edit_screen(screen_id):
+    """Edit screen name, location and description"""
+    screen = Screen.query.get_or_404(screen_id)
+
+    screen.name = request.form.get('name', screen.name)
+    screen.location = request.form.get('location', '')
+    screen.description = request.form.get('description', '')
+
+    db.session.commit()
+
+    flash(f'Skærmen "{screen.name}" er opdateret', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/screen/<int:screen_id>/delete')
+@login_required
+def delete_screen_route(screen_id):
+    """Delete a screen and all its associations"""
+    screen = Screen.query.get_or_404(screen_id)
+    screen_name = screen.name
+
+    # Delete will cascade to ScreenMedia associations automatically
+    db.session.delete(screen)
+    db.session.commit()
+
+    flash(f'Skærmen "{screen_name}" er slettet', 'success')
+    return redirect(url_for('dashboard'))
+
 def init_db():
     """Initialize database with default admin user"""
     with app.app_context():

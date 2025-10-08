@@ -136,11 +136,54 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         transition: transform 0.2s, box-shadow 0.2s;
         cursor: move;
+        position: relative;
     }
 
     .media-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .media-card.selected {
+        box-shadow: 0 0 0 3px #667eea;
+    }
+
+    .media-checkbox {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+        z-index: 5;
+        accent-color: #667eea;
+        background: white;
+        border: 2px solid #cbd5e0;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .media-checkbox:checked {
+        background: #667eea;
+        border-color: #667eea;
+    }
+
+    .bulk-actions {
+        position: sticky;
+        top: 0;
+        background: #667eea;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 10;
+    }
+
+    .bulk-actions.visible {
+        display: flex;
     }
 
     .media-preview {
@@ -359,6 +402,67 @@
         margin-bottom: 16px;
         opacity: 0.5;
     }
+
+    .screen-menu {
+        position: relative;
+        display: inline-block;
+    }
+
+    .screen-menu-button {
+        background: transparent;
+        border: none;
+        color: #718096;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 16px;
+        transition: all 0.2s;
+    }
+
+    .screen-menu-button:hover {
+        background: rgba(0,0,0,0.05);
+        color: #2d3748;
+    }
+
+    .screen-menu-dropdown {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 200px;
+        z-index: 1000;
+        margin-top: 4px;
+    }
+
+    .screen-menu-dropdown.visible {
+        display: block;
+    }
+
+    .screen-menu-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .screen-menu-item:last-child {
+        border-bottom: none;
+    }
+
+    .screen-menu-item:hover {
+        background: #f7fafc;
+    }
+
+    .screen-menu-item.danger:hover {
+        background: #fff5f5;
+        color: #c53030;
+    }
 </style>
 {% endblock %}
 
@@ -411,10 +515,17 @@
 
             <div class="section">
                 <h3>🎬 Global Media Liste ({{ media_files|selectattr('is_global')|list|length }} filer)</h3>
+
+                <div class="bulk-actions" id="globalBulkActions">
+                    <span id="globalSelectedCount">0 filer valgt</span>
+                    <button onclick="bulkDeleteGlobal()" class="btn btn-danger">🗑️ Slet valgte</button>
+                </div>
+
                 <div class="media-grid">
                     {% for media in media_files %}
                     {% if media.is_global %}
-                    <div class="media-card">
+                    <div class="media-card" id="global-media-{{ media.id }}">
+                        <input type="checkbox" class="media-checkbox global-media-checkbox" data-media-id="{{ media.id }}" onchange="updateGlobalBulkActions()">
                         {% if media.media_type == 'image' %}
                             <img src="/media/{{ media.filename }}" class="media-preview">
                         {% else %}
@@ -469,6 +580,17 @@
                     <button onclick="showQRCode({{ screen.id }})" class="btn btn-secondary">📱 QR Kode</button>
                     <button onclick="copyScreenURL('{{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}')" class="btn btn-secondary">🔗 Kopi URL</button>
                     <div class="toggle-switch {% if screen.active %}active{% endif %}" onclick="toggleScreen({{ screen.id }}, this)"></div>
+                    <div class="screen-menu">
+                        <button class="screen-menu-button" onclick="toggleScreenMenu({{ screen.id }}, event)">⋮</button>
+                        <div class="screen-menu-dropdown" id="screenMenu{{ screen.id }}">
+                            <div class="screen-menu-item" onclick="openEditScreenModal({{ screen.id }}, '{{ screen.name }}', '{{ screen.location or '' }}', '{{ screen.description or '' }}')">
+                                ✏️ Rediger skærm
+                            </div>
+                            <div class="screen-menu-item danger" onclick="confirmDeleteScreen({{ screen.id }}, '{{ screen.name }}')">
+                                🗑️ Slet skærm
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -505,10 +627,17 @@
                 <div>
                     <div class="section">
                         <h3>🎬 Media på {{ screen.name }} ({{ screen.media_associations|length }} filer)</h3>
+
+                        <div class="bulk-actions" id="screenBulkActions{{ screen.id }}">
+                            <span id="screenSelectedCount{{ screen.id }}">0 filer valgt</span>
+                            <button onclick="bulkDeleteScreen({{ screen.id }})" class="btn btn-danger">🗑️ Slet valgte</button>
+                        </div>
+
                         <div class="media-grid" id="screenMediaGrid{{ screen.id }}">
                             {% for assoc in screen.media_associations %}
                             {% set media = assoc.media %}
-                            <div class="media-card">
+                            <div class="media-card" id="screen-{{ screen.id }}-media-{{ media.id }}">
+                                <input type="checkbox" class="media-checkbox screen-media-checkbox" data-screen-id="{{ screen.id }}" data-media-id="{{ media.id }}" onchange="updateScreenBulkActions({{ screen.id }})">
                                 {% if media.media_type == 'image' %}
                                     <img src="/media/{{ media.filename }}" class="media-preview">
                                 {% else %}
@@ -520,10 +649,10 @@
                                         ⏱️ Varighed:
                                         <input type="number"
                                                class="duration-input"
-                                               value="{{ assoc.duration if assoc.duration else media.duration }}"
-                                               onchange="updateScreenMediaDuration({{ screen.id }}, {{ media.id }}, this.value)"
-                                               style="width: 60px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 3px; font-size: 10px;">
-                                        ms
+                                               value="{{ ((assoc.duration if assoc.duration else media.duration) / 1000)|int }}"
+                                               onchange="updateScreenMediaDuration({{ screen.id }}, {{ media.id }}, this.value * 1000)"
+                                               style="width: 50px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 3px; font-size: 10px;">
+                                        sek
                                         {% if assoc.duration %}
                                         <span style="color: #667eea;" title="Custom duration for this screen">🎯</span>
                                         {% endif %}
@@ -599,6 +728,32 @@
     </div>
 </div>
 
+<!-- EDIT SCREEN MODAL -->
+<div id="editScreenModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+        <h2 style="margin-top: 0;">Rediger Skærm</h2>
+        <form id="editScreenForm" method="POST">
+            <input type="hidden" id="editScreenId" name="screen_id">
+            <div class="form-group">
+                <label>Navn *</label>
+                <input type="text" id="editScreenName" name="name" required placeholder="fx. Reception Skærm">
+            </div>
+            <div class="form-group">
+                <label>Lokation</label>
+                <input type="text" id="editScreenLocation" name="location" placeholder="fx. Hovedindgang">
+            </div>
+            <div class="form-group">
+                <label>Beskrivelse</label>
+                <textarea id="editScreenDescription" name="description" rows="3"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Gem Ændringer</button>
+                <button type="button" onclick="closeEditScreenModal()" class="btn btn-secondary" style="flex: 1;">Annuller</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- EXPIRE MODAL -->
 <div id="expireModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
     <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
@@ -656,6 +811,48 @@ function openCreateScreenModal() {
 
 function closeCreateScreenModal() {
     document.getElementById('createScreenModal').style.display = 'none';
+}
+
+function toggleScreenMenu(screenId, event) {
+    event.stopPropagation();
+    const menu = document.getElementById('screenMenu' + screenId);
+
+    // Close all other menus
+    document.querySelectorAll('.screen-menu-dropdown').forEach(m => {
+        if (m.id !== 'screenMenu' + screenId) {
+            m.classList.remove('visible');
+        }
+    });
+
+    menu.classList.toggle('visible');
+}
+
+function openEditScreenModal(screenId, name, location, description) {
+    document.getElementById('editScreenId').value = screenId;
+    document.getElementById('editScreenName').value = name;
+    document.getElementById('editScreenLocation').value = location;
+    document.getElementById('editScreenDescription').value = description;
+
+    const form = document.getElementById('editScreenForm');
+    form.action = `/screen/${screenId}/edit`;
+
+    document.getElementById('editScreenModal').style.display = 'flex';
+
+    // Close dropdown
+    document.querySelectorAll('.screen-menu-dropdown').forEach(m => m.classList.remove('visible'));
+}
+
+function closeEditScreenModal() {
+    document.getElementById('editScreenModal').style.display = 'none';
+}
+
+function confirmDeleteScreen(screenId, name) {
+    if (confirm(`Er du sikker på at du vil slette skærmen "${name}"?\n\nAlle data og indstillinger for denne skærm vil blive slettet permanent.`)) {
+        window.location.href = `/screen/${screenId}/delete`;
+    }
+
+    // Close dropdown
+    document.querySelectorAll('.screen-menu-dropdown').forEach(m => m.classList.remove('visible'));
 }
 
 function toggleScreen(screenId, element) {
@@ -831,8 +1028,92 @@ function updateScreenMediaDuration(screenId, mediaId, duration) {
     });
 }
 
+// Bulk selection and delete functions
+function updateGlobalBulkActions() {
+    const checkboxes = document.querySelectorAll('.global-media-checkbox:checked');
+    const bulkActions = document.getElementById('globalBulkActions');
+    const countSpan = document.getElementById('globalSelectedCount');
+
+    if (checkboxes.length > 0) {
+        bulkActions.classList.add('visible');
+        countSpan.textContent = `${checkboxes.length} fil${checkboxes.length > 1 ? 'er' : ''} valgt`;
+        checkboxes.forEach(cb => {
+            document.getElementById('global-media-' + cb.dataset.mediaId).classList.add('selected');
+        });
+    } else {
+        bulkActions.classList.remove('visible');
+    }
+
+    // Remove selected class from unchecked
+    document.querySelectorAll('.global-media-checkbox:not(:checked)').forEach(cb => {
+        document.getElementById('global-media-' + cb.dataset.mediaId).classList.remove('selected');
+    });
+}
+
+function updateScreenBulkActions(screenId) {
+    const checkboxes = document.querySelectorAll(`.screen-media-checkbox[data-screen-id="${screenId}"]:checked`);
+    const bulkActions = document.getElementById('screenBulkActions' + screenId);
+    const countSpan = document.getElementById('screenSelectedCount' + screenId);
+
+    if (checkboxes.length > 0) {
+        bulkActions.classList.add('visible');
+        countSpan.textContent = `${checkboxes.length} fil${checkboxes.length > 1 ? 'er' : ''} valgt`;
+        checkboxes.forEach(cb => {
+            document.getElementById(`screen-${screenId}-media-${cb.dataset.mediaId}`).classList.add('selected');
+        });
+    } else {
+        bulkActions.classList.remove('visible');
+    }
+
+    // Remove selected class from unchecked
+    document.querySelectorAll(`.screen-media-checkbox[data-screen-id="${screenId}"]:not(:checked)`).forEach(cb => {
+        document.getElementById(`screen-${screenId}-media-${cb.dataset.mediaId}`).classList.remove('selected');
+    });
+}
+
+function bulkDeleteGlobal() {
+    const checkboxes = document.querySelectorAll('.global-media-checkbox:checked');
+    const mediaIds = Array.from(checkboxes).map(cb => cb.dataset.mediaId);
+
+    if (mediaIds.length === 0) return;
+
+    if (confirm(`Er du sikker på at du vil slette ${mediaIds.length} fil${mediaIds.length > 1 ? 'er' : ''}?`)) {
+        Promise.all(mediaIds.map(id =>
+            fetch(`/delete/${id}`).then(() => {
+                document.getElementById('global-media-' + id).remove();
+            })
+        )).then(() => {
+            window.location.reload();
+        });
+    }
+}
+
+function bulkDeleteScreen(screenId) {
+    const checkboxes = document.querySelectorAll(`.screen-media-checkbox[data-screen-id="${screenId}"]:checked`);
+    const mediaIds = Array.from(checkboxes).map(cb => cb.dataset.mediaId);
+
+    if (mediaIds.length === 0) return;
+
+    if (confirm(`Er du sikker på at du vil slette ${mediaIds.length} fil${mediaIds.length > 1 ? 'er' : ''}?`)) {
+        Promise.all(mediaIds.map(id =>
+            fetch(`/delete/${id}`).then(() => {
+                document.getElementById(`screen-${screenId}-media-${id}`).remove();
+            })
+        )).then(() => {
+            window.location.reload();
+        });
+    }
+}
+
 // Drag and drop support
 document.addEventListener('DOMContentLoaded', function() {
+    // Close screen menu when clicking outside
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.screen-menu-dropdown').forEach(m => {
+            m.classList.remove('visible');
+        });
+    });
+
     document.querySelectorAll('.upload-zone').forEach(zone => {
         zone.addEventListener('dragover', (e) => {
             e.preventDefault();
