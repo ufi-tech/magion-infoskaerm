@@ -93,6 +93,17 @@ class ScreenMedia(db.Model):
     order_index = db.Column(db.Integer, default=0)
     duration = db.Column(db.Integer, nullable=True)  # Screen-specific duration override
 
+class SponsorCarousel(db.Model):
+    """Sponsor logos for carousel ticker"""
+    __tablename__ = 'sponsor_carousel'
+    id = db.Column(db.Integer, primary_key=True)
+    screen_id = db.Column(db.Integer, db.ForeignKey('screen.id'), nullable=False)
+    filename = db.Column(db.String(500), nullable=False)
+    original_filename = db.Column(db.String(200), nullable=False)
+    order_index = db.Column(db.Integer, default=0)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
 class Screen(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
@@ -118,8 +129,15 @@ class Screen(db.Model):
     sponsor_logo_path = db.Column(db.String(500))  # Path to sponsor logo image
     magion_logo_path = db.Column(db.String(500))  # Path to MAGION logo image
 
+    # Sponsor carousel settings
+    carousel_enabled = db.Column(db.Boolean, default=False)  # Enable/disable sponsor carousel
+    carousel_speed = db.Column(db.String(20), default='medium')  # 'slow', 'medium', 'fast'
+
     # Relationship to media through association object
     media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan')
+
+    # Relationship to sponsor carousel logos
+    carousel_sponsors = db.relationship('SponsorCarousel', backref='screen', cascade='all, delete-orphan', order_by='SponsorCarousel.order_index')
 
     @property
     def media_items(self):
@@ -732,13 +750,21 @@ def display_screen(screen_uuid):
             logger.error(f"Failed to fetch JSON API: {e}")
             json_data = []
 
+        # Get carousel sponsors if enabled
+        carousel_sponsors = []
+        if screen.carousel_enabled:
+            carousel_sponsors = [s.filename for s in screen.carousel_sponsors]
+
         return render_template('display_json.html',
                              json_data=json.dumps(json_data),
                              json_template=screen.json_template or 'schedule',
                              screen_name=screen.name,
                              screen_uuid=str(screen_uuid),
                              sponsor_logo=screen.sponsor_logo_path,
-                             magion_logo=screen.magion_logo_path)
+                             magion_logo=screen.magion_logo_path,
+                             carousel_enabled=screen.carousel_enabled,
+                             carousel_speed=screen.carousel_speed or 'medium',
+                             carousel_sponsors=carousel_sponsors)
 
     # Default: media rotation mode
     if not screen.active:
@@ -948,6 +974,13 @@ def update_screen_settings(screen_id):
             screen.magion_logo_path = f"/uploads/logos/{unique_filename}"
             logger.info(f"Uploaded MAGION logo for screen {screen.name}: {screen.magion_logo_path}")
 
+    # Handle carousel settings
+    # Checkbox values: if checked, it's sent in data; if unchecked, it's not sent
+    screen.carousel_enabled = 'carousel_enabled' in data
+
+    if 'carousel_speed' in data:
+        screen.carousel_speed = data['carousel_speed']
+
     db.session.commit()
 
     if request.is_json:
@@ -970,6 +1003,64 @@ def edit_screen(screen_id):
 
     flash(f'Skærmen "{screen.name}" er opdateret', 'success')
     return redirect(url_for('dashboard'))
+
+@app.route('/screen/<int:screen_id>/carousel/upload', methods=['POST'])
+@login_required
+def upload_carousel_sponsors(screen_id):
+    """Upload sponsor logos for carousel"""
+    screen = Screen.query.get_or_404(screen_id)
+
+    files = request.files.getlist('carousel_sponsors')
+    uploaded_count = 0
+
+    for file in files:
+        if file and file.filename:
+            # Create carousel directory if it doesn't exist
+            carousel_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'carousel')
+            os.makedirs(carousel_dir, exist_ok=True)
+
+            # Generate unique filename
+            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            filename = secure_filename(file.filename)
+            unique_filename = f"{screen.uuid}_carousel_{timestamp}_{filename}"
+            filepath = os.path.join(carousel_dir, unique_filename)
+
+            # Save file
+            file.save(filepath)
+
+            # Create database entry
+            sponsor = SponsorCarousel(
+                screen_id=screen.id,
+                filename=f"/uploads/carousel/{unique_filename}",
+                original_filename=file.filename,
+                order_index=SponsorCarousel.query.filter_by(screen_id=screen.id).count(),
+                uploaded_by=current_user.id
+            )
+            db.session.add(sponsor)
+            uploaded_count += 1
+
+    db.session.commit()
+    return jsonify({'success': True, 'count': uploaded_count})
+
+@app.route('/screen/<int:screen_id>/carousel/<int:sponsor_id>/delete', methods=['POST'])
+@login_required
+def delete_carousel_sponsor(screen_id, sponsor_id):
+    """Delete a carousel sponsor logo"""
+    screen = Screen.query.get_or_404(screen_id)
+    sponsor = SponsorCarousel.query.filter_by(id=sponsor_id, screen_id=screen.id).first_or_404()
+
+    # Delete file from filesystem
+    try:
+        file_path = os.path.join(app.root_path, sponsor.filename.lstrip('/'))
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        logger.warning(f"Failed to delete carousel sponsor file: {e}")
+
+    db.session.delete(sponsor)
+    db.session.commit()
+
+    return jsonify({'success': True})
 
 @app.route('/screen/<int:screen_id>/delete')
 @login_required
@@ -1147,6 +1238,14 @@ def init_db():
                 if 'magion_logo_path' not in screen_columns:
                     conn.execute(text("ALTER TABLE screen ADD COLUMN magion_logo_path VARCHAR(500)"))
                     logger.info("Added magion_logo_path column to screen table")
+
+                if 'carousel_enabled' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN carousel_enabled BOOLEAN DEFAULT 0"))
+                    logger.info("Added carousel_enabled column to screen table")
+
+                if 'carousel_speed' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN carousel_speed VARCHAR(20) DEFAULT 'medium'"))
+                    logger.info("Added carousel_speed column to screen table")
 
                 conn.commit()
         except Exception as e:

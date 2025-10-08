@@ -713,6 +713,43 @@
                                     <input type="file" name="sponsor_logo" accept="image/*" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
                                     <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload sponsor logo der vises centreret i header (anbefalet: hvid logo på transparent baggrund)</div>
                                 </div>
+
+                                <div class="form-group" style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px; margin-top: 20px;">
+                                    <label style="color: white; font-size: 16px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                        🎠 Sponsor Carousel (bund af skærm)
+                                        <input type="checkbox" name="carousel_enabled" value="true" {% if screen.carousel_enabled %}checked{% endif %}
+                                               style="width: 20px; height: 20px; cursor: pointer;">
+                                    </label>
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 15px;">Aktiver for at vise scrollende sponsor logoer i bunden af skærmen</div>
+
+                                    <div id="carouselSettings{{ screen.id }}" style="{% if not screen.carousel_enabled %}display: none;{% endif %}">
+                                        <div class="form-group">
+                                            <label style="color: white;">⚡ Scroll Hastighed</label>
+                                            <select name="carousel_speed" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+                                                <option value="slow" {% if screen.carousel_speed == 'slow' %}selected{% endif %}>🐌 Langsom (60s)</option>
+                                                <option value="medium" {% if screen.carousel_speed == 'medium' or not screen.carousel_speed %}selected{% endif %}>🚶 Medium (40s)</option>
+                                                <option value="fast" {% if screen.carousel_speed == 'fast' %}selected{% endif %}>🏃 Hurtig (25s)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label style="color: white;">📤 Upload Sponsor Logoer</label>
+                                            <div id="carouselLogos{{ screen.id }}" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                                                {% for sponsor in screen.carousel_sponsors %}
+                                                <div class="carousel-logo-item" style="position: relative; background: white; padding: 5px; border-radius: 4px;">
+                                                    <img src="{{ sponsor.filename }}" alt="{{ sponsor.original_filename }}" style="height: 50px; width: auto; max-width: 120px; object-fit: contain;">
+                                                    <button type="button" onclick="deleteCarouselSponsor({{ screen.id }}, {{ sponsor.id }})" style="position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; line-height: 1;">×</button>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            <input type="file" id="carouselUpload{{ screen.id }}" multiple accept="image/*" style="display: none;" onchange="uploadCarouselSponsors({{ screen.id }})">
+                                            <button type="button" onclick="document.getElementById('carouselUpload{{ screen.id }}').click()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer;">
+                                                ➕ Tilføj Sponsor Logoer
+                                            </button>
+                                            <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload flere sponsor logoer (PNG/JPG med transparent baggrund anbefalet)</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <button type="submit" class="btn" style="background: white; color: #667eea; width: 100%;">💾 Gem Indstillinger</button>
@@ -737,6 +774,57 @@
 
                     // Initialize on page load
                     toggleDisplayModeFields{{ screen.id }}();
+
+                    // Toggle carousel settings visibility
+                    document.querySelector('input[name="carousel_enabled"]').addEventListener('change', function() {
+                        const settings = document.getElementById('carouselSettings{{ screen.id }}');
+                        settings.style.display = this.checked ? 'block' : 'none';
+                    });
+
+                    // Upload carousel sponsors
+                    async function uploadCarouselSponsors(screenId) {
+                        const fileInput = document.getElementById('carouselUpload' + screenId);
+                        const files = fileInput.files;
+
+                        if (files.length === 0) return;
+
+                        const formData = new FormData();
+                        for (let i = 0; i < files.length; i++) {
+                            formData.append('carousel_sponsors', files[i]);
+                        }
+
+                        try {
+                            const response = await fetch(`/screen/${screenId}/carousel/upload`, {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            const result = await response.json();
+                            if (result.success) {
+                                location.reload(); // Reload to show new logos
+                            }
+                        } catch (error) {
+                            alert('Fejl ved upload: ' + error.message);
+                        }
+                    }
+
+                    // Delete carousel sponsor
+                    async function deleteCarouselSponsor(screenId, sponsorId) {
+                        if (!confirm('Slet dette sponsor logo?')) return;
+
+                        try {
+                            const response = await fetch(`/screen/${screenId}/carousel/${sponsorId}/delete`, {
+                                method: 'POST'
+                            });
+
+                            const result = await response.json();
+                            if (result.success) {
+                                location.reload(); // Reload to update view
+                            }
+                        } catch (error) {
+                            alert('Fejl ved sletning: ' + error.message);
+                        }
+                    }
                     </script>
                 </div>
 

@@ -82,6 +82,71 @@
             line-height: 1;
         }
 
+        /* Sponsor Carousel */
+        .sponsor-carousel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: white;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .carousel-track {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            gap: 60px;
+            animation: scroll var(--carousel-speed, 40s) linear infinite;
+        }
+
+        .carousel-track:hover {
+            animation-play-state: paused;
+        }
+
+        .carousel-logo {
+            height: 50px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            flex-shrink: 0;
+            transition: transform 0.3s;
+        }
+
+        .carousel-logo:hover {
+            transform: scale(1.15);
+        }
+
+        @keyframes scroll {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* Speed variants */
+        .carousel-speed-slow {
+            --carousel-speed: 60s;
+        }
+
+        .carousel-speed-medium {
+            --carousel-speed: 40s;
+        }
+
+        .carousel-speed-fast {
+            --carousel-speed: 25s;
+        }
+
+        /* Adjust activities wrapper when carousel is enabled */
+        body.carousel-enabled .activities-wrapper {
+            max-height: calc(100vh - 180px);
+        }
+
         .activities-wrapper {
             flex: 1;
             padding: 20px;
@@ -518,7 +583,7 @@
         }
     </style>
 </head>
-<body class="template-{{ json_template or 'schedule' }}">
+<body class="template-{{ json_template or 'schedule' }}{% if carousel_enabled %} carousel-enabled{% endif %}">
     <div class="offline-indicator" id="offlineIndicator">
         📡 Offline mode - Viser cached data
     </div>
@@ -544,6 +609,21 @@
             <div class="loading">🔄 Indlæser aktiviteter...</div>
         </div>
     </div>
+
+    {% if carousel_enabled and carousel_sponsors|length > 0 %}
+    <!-- Sponsor Carousel -->
+    <div class="sponsor-carousel carousel-speed-{{ carousel_speed }}">
+        <div class="carousel-track">
+            {% for logo in carousel_sponsors %}
+            <img src="{{ logo }}" alt="Sponsor" class="carousel-logo">
+            {% endfor %}
+            <!-- Duplicate for seamless loop -->
+            {% for logo in carousel_sponsors %}
+            <img src="{{ logo }}" alt="Sponsor" class="carousel-logo" aria-hidden="true">
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <script>
         let rawJsonData = {{ json_data|safe }};
