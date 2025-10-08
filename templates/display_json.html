@@ -748,8 +748,29 @@
                 return;
             }
 
+            // Filter out activities that have ended (TilTid has passed)
+            const activeData = jsonData.filter(activity => {
+                const toTime = activity.tiltid || activity.TilTid || '';
+                if (!toTime) return true; // If no end time, show it
+
+                try {
+                    const [toHour, toMin] = toTime.split(':').map(Number);
+                    const toMinutes = toHour * 60 + toMin;
+                    return currentTime < toMinutes; // Only show if current time is before end time
+                } catch (e) {
+                    return true; // If parse error, show it
+                }
+            });
+
+            console.log(`📊 Showing ${activeData.length} of ${jsonData.length} activities (filtered ${jsonData.length - activeData.length} ended activities)`);
+
+            if (activeData.length === 0) {
+                container.innerHTML = '<div class="no-activities">📭 Ingen flere aktiviteter i dag</div>';
+                return;
+            }
+
             // Sort by time
-            jsonData.sort((a, b) => {
+            activeData.sort((a, b) => {
                 const timeA = a.fratid || a.FraTid || '';
                 const timeB = b.fratid || b.FraTid || '';
                 return timeA.localeCompare(timeB);
@@ -760,16 +781,16 @@
             // Render based on template
             switch(template) {
                 case 'table':
-                    renderTableTemplate(jsonData, currentTime, container);
+                    renderTableTemplate(activeData, currentTime, container);
                     break;
                 case 'timeline':
-                    renderTimelineTemplate(jsonData, currentTime, container);
+                    renderTimelineTemplate(activeData, currentTime, container);
                     break;
                 case 'compact':
-                    renderCompactTemplate(jsonData, currentTime, container);
+                    renderCompactTemplate(activeData, currentTime, container);
                     break;
                 default: // 'schedule'
-                    renderScheduleTemplate(jsonData, currentTime, container);
+                    renderScheduleTemplate(activeData, currentTime, container);
             }
 
             // Scroll to top
