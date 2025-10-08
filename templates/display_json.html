@@ -99,8 +99,10 @@
             display: flex;
             align-items: center;
             height: 100%;
-            gap: 60px;
+            gap: 40px;
+            padding-left: 40px;
             animation: scroll var(--carousel-speed, 40s) linear infinite;
+            will-change: transform;
         }
 
         .carousel-track:hover {
@@ -113,7 +115,7 @@
             max-width: 200px;
             object-fit: contain;
             flex-shrink: 0;
-            transition: transform 0.3s;
+            transition: transform 0.3s ease;
         }
 
         .carousel-logo:hover {
@@ -121,10 +123,10 @@
         }
 
         @keyframes scroll {
-            0% {
+            from {
                 transform: translateX(0);
             }
-            100% {
+            to {
                 transform: translateX(-50%);
             }
         }
@@ -614,10 +616,19 @@
     <!-- Sponsor Carousel -->
     <div class="sponsor-carousel carousel-speed-{{ carousel_speed }}">
         <div class="carousel-track">
+            <!-- Original logos -->
             {% for logo in carousel_sponsors %}
             <img src="{{ logo }}" alt="Sponsor" class="carousel-logo">
             {% endfor %}
-            <!-- Duplicate for seamless loop -->
+            <!-- Duplicate set 1 for seamless loop -->
+            {% for logo in carousel_sponsors %}
+            <img src="{{ logo }}" alt="Sponsor" class="carousel-logo" aria-hidden="true">
+            {% endfor %}
+            <!-- Duplicate set 2 for extra smooth scrolling -->
+            {% for logo in carousel_sponsors %}
+            <img src="{{ logo }}" alt="Sponsor" class="carousel-logo" aria-hidden="true">
+            {% endfor %}
+            <!-- Duplicate set 3 for extra smooth scrolling -->
             {% for logo in carousel_sponsors %}
             <img src="{{ logo }}" alt="Sponsor" class="carousel-logo" aria-hidden="true">
             {% endfor %}
