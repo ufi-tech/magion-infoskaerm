@@ -427,6 +427,62 @@
         background: #fff5f5;
         color: #c53030;
     }
+
+    /* Screen Tabs */
+    .screen-tabs {
+        display: flex;
+        background: #f8f9fa;
+        border-bottom: 2px solid #e2e8f0;
+        gap: 5px;
+        padding: 10px 10px 0 10px;
+    }
+
+    .screen-tab {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        color: #718096;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .screen-tab:hover {
+        background: rgba(239, 125, 0, 0.1);
+        color: #EF7D00;
+    }
+
+    .screen-tab.active {
+        background: white;
+        color: #EF7D00;
+        font-weight: 600;
+    }
+
+    .screen-tab-content {
+        display: none;
+        padding: 30px;
+        background: white;
+    }
+
+    .screen-tab-content.active {
+        display: block;
+    }
+
+    /* Drag and Drop */
+    .media-card.dragging {
+        opacity: 0.5;
+        transform: rotate(3deg);
+    }
+
+    .media-card.drag-over {
+        border: 2px dashed #EF7D00;
+        background: #FFF5EB;
+    }
 </style>
 {% endblock %}
 
@@ -539,17 +595,36 @@
                 </div>
             </div>
 
-            <div class="grid-2col">
-                <div>
-                    <div class="section">
-                        <h3>📤 Upload til {{ screen.name }}</h3>
-                        <div class="upload-zone" onclick="document.getElementById('screenFileInput{{ screen.id }}').click()" data-screen-id="{{ screen.id }}">
-                            <input type="file" id="screenFileInput{{ screen.id }}" multiple accept="image/*,video/*" style="display: none;" onchange="handleScreenFileSelect(this, {{ screen.id }})">
-                            <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
-                            <div style="font-size: 16px; color: #4a5568; margin-bottom: 5px;">Upload media kun til denne skærm</div>
-                            <div style="font-size: 12px; color: #718096;">Klik eller træk filer her</div>
-                        </div>
+            <!-- Screen Tabs -->
+            <div class="screen-tabs">
+                <button class="screen-tab active" onclick="switchScreenTab({{ screen.id }}, 'upload')">
+                    📤 Upload
+                </button>
+                <button class="screen-tab" onclick="switchScreenTab({{ screen.id }}, 'settings')">
+                    ⚙️ Indstillinger
+                </button>
+                <button class="screen-tab" onclick="switchScreenTab({{ screen.id }}, 'media')">
+                    🎬 Media ({{ screen.media_associations|length }})
+                </button>
+            </div>
+
+            <!-- Tab: Upload -->
+            <div id="screen{{ screen.id }}-tab-upload" class="screen-tab-content active">
+                <div class="section">
+                    <h3>📤 Upload til {{ screen.name }}</h3>
+                    <div class="upload-zone" onclick="document.getElementById('screenFileInput{{ screen.id }}').click()" data-screen-id="{{ screen.id }}">
+                        <input type="file" id="screenFileInput{{ screen.id }}" multiple accept="image/*,video/*" style="display: none;" onchange="handleScreenFileSelect(this, {{ screen.id }})">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                        <div style="font-size: 16px; color: #4a5568; margin-bottom: 5px;">Upload media kun til denne skærm</div>
+                        <div style="font-size: 12px; color: #718096;">Klik eller træk filer her</div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab: Settings -->
+            <div id="screen{{ screen.id }}-tab-settings" class="screen-tab-content">
+                <div class="section">
+                    <h3>🎯 Display Mode &amp; Indstillinger</h3>
 
                     <div class="redirect-section">
                         <h3 style="color: white; margin: 0 0 15px 0;">🎯 Display Mode</h3>
@@ -763,10 +838,15 @@
                     }
                     </script>
                 </div>
+            </div>
 
-                <div>
-                    <div class="section">
-                        <h3>🎬 Media på {{ screen.name }} ({{ screen.media_associations|length }} filer)</h3>
+            <!-- Tab: Media -->
+            <div id="screen{{ screen.id }}-tab-media" class="screen-tab-content">
+                <div class="section">
+                    <h3>🎬 Media på {{ screen.name }} ({{ screen.media_associations|length }} filer)</h3>
+                    <p style="color: #718096; font-size: 13px; margin-bottom: 15px;">
+                        💡 Tip: Træk og slip billeder for at ændre rækkefølgen
+                    </p>
 
                         <div class="bulk-actions" id="screenBulkActions{{ screen.id }}">
                             <span id="screenSelectedCount{{ screen.id }}">0 filer valgt</span>
@@ -819,13 +899,12 @@
                             <p style="font-size: 12px;">Denne skærm viser global media</p>
                         </div>
                         {% endif %}
-                    </div>
+                </div>
 
-                    <div class="qr-display" id="qrDisplay{{ screen.id }}" style="display: none;">
-                        <h3>QR Kode - {{ screen.name }}</h3>
-                        <img id="qrImage{{ screen.id }}" src="" alt="QR Code">
-                        <div class="url-display" id="qrURL{{ screen.id }}"></div>
-                    </div>
+                <div class="qr-display" id="qrDisplay{{ screen.id }}" style="display: none;">
+                    <h3>QR Kode - {{ screen.name }}</h3>
+                    <img id="qrImage{{ screen.id }}" src="" alt="QR Code">
+                    <div class="url-display" id="qrURL{{ screen.id }}"></div>
                 </div>
             </div>
         </div>
@@ -1045,6 +1124,110 @@ function switchTab(tabId) {
     // Show selected tab
     document.getElementById('tab-' + tabId).classList.add('active');
     event.target.classList.add('active');
+}
+
+// Screen Tab Switching
+function switchScreenTab(screenId, tabName) {
+    // Hide all tabs for this screen
+    document.querySelectorAll(`#tab-screen-${screenId} .screen-tab`).forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll(`#tab-screen-${screenId} .screen-tab-content`).forEach(content => {
+        content.classList.remove('active');
+    });
+
+    // Show selected tab
+    document.querySelector(`#tab-screen-${screenId} .screen-tab[onclick*="${tabName}"]`).classList.add('active');
+    document.getElementById(`screen${screenId}-tab-${tabName}`).classList.add('active');
+}
+
+// Drag and Drop for Media Reordering
+let draggedElement = null;
+let draggedScreenId = null;
+let draggedMediaId = null;
+
+function initializeDragAndDrop() {
+    document.querySelectorAll('.media-grid').forEach(grid => {
+        const screenId = grid.id.match(/screenMediaGrid(\d+)/)?.[1];
+        if (!screenId) return;
+
+        grid.querySelectorAll('.media-card').forEach(card => {
+            card.draggable = true;
+
+            card.addEventListener('dragstart', function(e) {
+                draggedElement = this;
+                draggedScreenId = screenId;
+                draggedMediaId = this.id.match(/media-(\d+)/)?.[1];
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            card.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+                document.querySelectorAll('.media-card').forEach(c => c.classList.remove('drag-over'));
+            });
+
+            card.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (this !== draggedElement) {
+                    this.classList.add('drag-over');
+                }
+            });
+
+            card.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+
+            card.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+
+                if (this !== draggedElement && draggedElement) {
+                    // Reorder in DOM
+                    const allCards = Array.from(grid.querySelectorAll('.media-card'));
+                    const draggedIndex = allCards.indexOf(draggedElement);
+                    const targetIndex = allCards.indexOf(this);
+
+                    if (draggedIndex < targetIndex) {
+                        this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                    } else {
+                        this.parentNode.insertBefore(draggedElement, this);
+                    }
+
+                    // Save new order to backend
+                    saveMediaOrder(screenId);
+                }
+            });
+        });
+    });
+}
+
+async function saveMediaOrder(screenId) {
+    const grid = document.getElementById(`screenMediaGrid${screenId}`);
+    const mediaCards = grid.querySelectorAll('.media-card');
+    const mediaIds = Array.from(mediaCards).map(card => {
+        const match = card.id.match(/media-(\d+)/);
+        return match ? parseInt(match[1]) : null;
+    }).filter(id => id !== null);
+
+    try {
+        const response = await fetch(`/screen/${screenId}/reorder-media`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({media_ids: mediaIds})
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            console.log('Media order saved successfully');
+        } else {
+            alert('Fejl ved gem af rækkefølge: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving media order:', error);
+        alert('Netværksfejl ved gem af rækkefølge');
+    }
 }
 
 function openCreateScreenModal() {
@@ -1384,6 +1567,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Initialize drag and drop for media reordering
+    initializeDragAndDrop();
 
     // Load cache info when system info tab is opened
     document.querySelector('[onclick*="system-info"]')?.addEventListener('click', () => {

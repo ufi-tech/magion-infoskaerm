@@ -134,7 +134,7 @@ class Screen(db.Model):
     carousel_speed = db.Column(db.String(20), default='medium')  # 'slow', 'medium', 'fast'
 
     # Relationship to media through association object
-    media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan')
+    media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan', order_by='ScreenMedia.order_index')
 
     # Relationship to sponsor carousel logos
     carousel_sponsors = db.relationship('SponsorCarousel', backref='screen', cascade='all, delete-orphan', order_by='SponsorCarousel.order_index')
@@ -789,6 +789,37 @@ def update_screen_media_duration(screen_id, media_id):
         'success': True,
         'duration': assoc.duration
     })
+
+@app.route('/screen/<int:screen_id>/reorder-media', methods=['POST'])
+@login_required
+def reorder_screen_media(screen_id):
+    """Reorder media items for a specific screen"""
+    screen = Screen.query.get_or_404(screen_id)
+
+    data = request.json
+    media_ids = data.get('media_ids', [])
+
+    if not media_ids:
+        return jsonify({'success': False, 'error': 'No media IDs provided'}), 400
+
+    try:
+        # Update order_index for each media association
+        for index, media_id in enumerate(media_ids):
+            assoc = ScreenMedia.query.filter_by(screen_id=screen_id, media_id=media_id).first()
+            if assoc:
+                assoc.order_index = index
+
+        db.session.commit()
+        logger.info(f"Reordered {len(media_ids)} media items for screen {screen.name}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Successfully reordered {len(media_ids)} media items'
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error reordering media for screen {screen_id}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/screen/<uuid:screen_uuid>')
 def display_screen(screen_uuid):
