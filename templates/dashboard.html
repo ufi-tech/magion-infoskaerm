@@ -323,24 +323,286 @@
         color: #2c5282;
     }
 
-    .redirect-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .display-mode-section {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .display-mode-header {
+        background: linear-gradient(135deg, #EF7D00 0%, #D97000 100%);
         color: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-top: 20px;
+        padding: 20px 25px;
+        border-bottom: 3px solid #C56600;
     }
 
-    .redirect-section input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
+    .display-mode-header h3 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .display-mode-header p {
+        margin: 0;
+        font-size: 13px;
+        opacity: 0.9;
+    }
+
+    .display-mode-body {
+        padding: 25px;
+    }
+
+    .mode-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 25px;
+    }
+
+    .mode-option {
+        position: relative;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 16px;
         cursor: pointer;
-        margin-right: 10px;
+        transition: all 0.2s;
+        background: #f8f9fa;
     }
 
-    .redirect-section input[type="url"] {
-        background: rgba(255,255,255,0.9);
-        border: 1px solid rgba(255,255,255,0.3);
+    .mode-option:hover {
+        border-color: #EF7D00;
+        background: #FFF5EB;
+        transform: translateY(-2px);
+    }
+
+    .mode-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .mode-option input[type="radio"]:checked + .mode-content {
+        color: #EF7D00;
+        font-weight: 600;
+    }
+
+    .mode-option input[type="radio"]:checked ~ .mode-indicator {
+        background: #EF7D00;
+        border-color: #EF7D00;
+    }
+
+    .mode-option:has(input:checked) {
+        border-color: #EF7D00;
+        background: #FFF5EB;
+        box-shadow: 0 4px 12px rgba(239, 125, 0, 0.2);
+    }
+
+    .mode-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: #4a5568;
+        transition: all 0.2s;
+    }
+
+    .mode-icon {
+        font-size: 20px;
+    }
+
+    .mode-indicator {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #cbd5e0;
+        border-radius: 50%;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .mode-indicator::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.2s;
+    }
+
+    .mode-option:has(input:checked) .mode-indicator::after {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .settings-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 15px;
+    }
+
+    .settings-card h4 {
+        margin: 0 0 15px 0;
+        color: #2d3748;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Statistics Cards */
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(239, 125, 0, 0.15);
+    }
+
+    .stats-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+
+    .stats-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #EF7D00;
+        margin-bottom: 8px;
+    }
+
+    .stats-label {
+        font-size: 13px;
+        color: #718096;
+        font-weight: 500;
+    }
+
+    /* Screens Grid */
+    .screens-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    .screen-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .screen-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+
+    .screen-card.screen-inactive {
+        opacity: 0.7;
+    }
+
+    .screen-preview {
+        width: 100%;
+        height: 180px;
+        background: #f8f9fa;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .screen-preview img,
+    .screen-preview video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .screen-preview-empty {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+
+    .screen-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .inactive-badge {
+        background: rgba(255, 255, 255, 0.95);
+        color: #e53e3e;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .screen-card-content {
+        padding: 20px;
+    }
+
+    .screen-card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0 0 12px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .screen-card-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        color: #718096;
+    }
+
+    .screen-card-actions {
+        display: flex;
+        gap: 8px;
+        padding-top: 16px;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .btn-icon {
+        flex: 1;
+        padding: 10px;
+        background: #f8f9fa;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+        background: #FFF5EB;
+        transform: scale(1.1);
     }
 
     .grid-2col {
@@ -491,14 +753,103 @@
     <!-- Content Container -->
     <div class="tabs-container">
 
-        <!-- GLOBAL MEDIA TAB -->
+        <!-- MAIN DASHBOARD / FORSIDE -->
         <div id="tab-global" class="tab-content active">
-            <div class="screen-header">
-                <div class="screen-info">
-                    <h2>🌍 Global Media</h2>
-                    <p style="color: #718096; margin: 0;">Media der vises på alle skærme som ikke har specifikt tildelt media</p>
+            <div style="margin-bottom: 40px;">
+                <h1 style="font-size: 32px; color: #2d3748; margin: 0 0 10px 0; font-weight: 700;">Velkommen til Magion 👋</h1>
+                <p style="color: #718096; font-size: 16px; margin: 0;">Administrer dine info-skærme og media her</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
+                <div class="stats-card">
+                    <div class="stats-icon">🖥️</div>
+                    <div class="stats-value">{{ screens|length }}</div>
+                    <div class="stats-label">Skærme Total</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon">✅</div>
+                    <div class="stats-value">{{ screens|selectattr('active')|list|length }}</div>
+                    <div class="stats-label">Aktive Skærme</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon">🎬</div>
+                    <div class="stats-value">{{ media_files|length }}</div>
+                    <div class="stats-label">Total Media</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon">🌍</div>
+                    <div class="stats-value">{{ media_files|selectattr('is_global')|list|length }}</div>
+                    <div class="stats-label">Global Media</div>
                 </div>
             </div>
+
+            <!-- Screens Grid -->
+            <div style="margin-bottom: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 24px; color: #2d3748; margin: 0; font-weight: 600;">Dine Skærme</h2>
+                    <button onclick="openCreateScreenModal()" class="btn btn-primary">➕ Opret Ny Skærm</button>
+                </div>
+
+                {% if screens|length > 0 %}
+                <div class="screens-grid">
+                    {% for screen in screens %}
+                    <div class="screen-card {% if not screen.active %}screen-inactive{% endif %}" onclick="switchTab('screen-{{ screen.id }}')">
+                        <!-- Preview Image -->
+                        <div class="screen-preview">
+                            {% if screen.media_associations|length > 0 %}
+                                {% set first_media = screen.media_associations[0].media %}
+                                {% if first_media.media_type == 'image' %}
+                                    <img src="/media/{{ first_media.filename }}" alt="{{ screen.name }}">
+                                {% else %}
+                                    <video src="/media/{{ first_media.filename }}" muted></video>
+                                {% endif %}
+                            {% else %}
+                                <div class="screen-preview-empty">
+                                    <span style="font-size: 48px; opacity: 0.3;">🖥️</span>
+                                </div>
+                            {% endif %}
+                            {% if not screen.active %}
+                            <div class="screen-overlay">
+                                <span class="inactive-badge">⏸️ Inaktiv</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Content -->
+                        <div class="screen-card-content">
+                            <h3 class="screen-card-title">{{ screen.name }}</h3>
+                            <div class="screen-card-meta">
+                                <span>📍 {{ screen.location or 'Ingen lokation' }}</span>
+                                <span>🎬 {{ screen.media_associations|length }} media</span>
+                            </div>
+                            <div class="screen-card-actions" onclick="event.stopPropagation()">
+                                <button onclick="switchTab('screen-{{ screen.id }}')" class="btn-icon" title="Administrer">⚙️</button>
+                                <button onclick="showQRCode({{ screen.id }})" class="btn-icon" title="Vis QR Kode">📱</button>
+                                <button onclick="window.open('{{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}', '_blank')" class="btn-icon" title="Åbn display">🚀</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">🖥️</div>
+                    <h3>Ingen skærme oprettet endnu</h3>
+                    <p>Klik på "Opret Ny Skærm" for at komme i gang</p>
+                    <button onclick="openCreateScreenModal()" class="btn btn-primary" style="margin-top: 20px;">➕ Opret Din Første Skærm</button>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Global Media Section -->
+            <div style="border-top: 2px solid #e2e8f0; padding-top: 30px; margin-top: 40px;">
+                <div class="screen-header">
+                    <div class="screen-info">
+                        <h2 style="font-size: 20px;">🌍 Global Media</h2>
+                        <p style="color: #718096; margin: 0; font-size: 14px;">Media der vises på alle skærme som ikke har specifikt tildelt media</p>
+                    </div>
+                </div>
 
             <div class="section">
                 <h3>📤 Upload Global Media</h3>
@@ -623,77 +974,100 @@
 
             <!-- Tab: Settings -->
             <div id="screen{{ screen.id }}-tab-settings" class="screen-tab-content">
-                <div class="section">
-                    <h3>🎯 Display Mode &amp; Indstillinger</h3>
+                <form method="POST" action="{{ url_for('update_screen_settings', screen_id=screen.id) }}" id="displayModeForm{{ screen.id }}" enctype="multipart/form-data">
+                    {% set current_mode = screen.display_mode or 'media' %}
+                    {% if screen.redirect_enabled and screen.redirect_url %}
+                        {% set current_mode = 'redirect' %}
+                    {% endif %}
 
-                    <div class="redirect-section">
-                        <h3 style="color: white; margin: 0 0 15px 0;">🎯 Display Mode</h3>
-                        <form method="POST" action="{{ url_for('update_screen_settings', screen_id=screen.id) }}" id="displayModeForm{{ screen.id }}" enctype="multipart/form-data">
-                            {% set current_mode = screen.display_mode or 'media' %}
-                            {% if screen.redirect_enabled and screen.redirect_url %}
-                                {% set current_mode = 'redirect' %}
-                            {% endif %}
+                    <!-- Display Mode Card -->
+                    <div class="display-mode-section">
+                        <div class="display-mode-header">
+                            <h3>🎯 Display Mode</h3>
+                            <p>Vælg hvordan denne skærm skal vise indhold</p>
+                        </div>
+                        <div class="display-mode-body">
+                            <div class="mode-selector">
+                                <label class="mode-option">
+                                    <input type="radio" name="display_mode" value="media" {% if current_mode == 'media' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()">
+                                    <div class="mode-content">
+                                        <span class="mode-icon">📺</span>
+                                        <span>Media Rotation</span>
+                                    </div>
+                                    <div class="mode-indicator"></div>
+                                </label>
 
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label style="color: white; margin-bottom: 10px; display: block; font-weight: 600;">Vælg visningstype:</label>
-                                <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
-                                        <input type="radio" name="display_mode" value="media" {% if current_mode == 'media' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
-                                        <span>📺 Media Rotation (billeder/videoer)</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
-                                        <input type="radio" name="display_mode" value="redirect" {% if current_mode == 'redirect' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
-                                        <span>🔗 URL Redirect</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
-                                        <input type="radio" name="display_mode" value="iframe" {% if current_mode == 'iframe' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
-                                        <span>🖼️ iFrame (vis ekstern side)</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; color: white; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
-                                        <input type="radio" name="display_mode" value="json_api" {% if current_mode == 'json_api' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()" style="margin-right: 8px;">
-                                        <span>📊 JSON API (hent data)</span>
-                                    </label>
+                                <label class="mode-option">
+                                    <input type="radio" name="display_mode" value="redirect" {% if current_mode == 'redirect' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()">
+                                    <div class="mode-content">
+                                        <span class="mode-icon">🔗</span>
+                                        <span>URL Redirect</span>
+                                    </div>
+                                    <div class="mode-indicator"></div>
+                                </label>
+
+                                <label class="mode-option">
+                                    <input type="radio" name="display_mode" value="iframe" {% if current_mode == 'iframe' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()">
+                                    <div class="mode-content">
+                                        <span class="mode-icon">🖼️</span>
+                                        <span>iFrame</span>
+                                    </div>
+                                    <div class="mode-indicator"></div>
+                                </label>
+
+                                <label class="mode-option">
+                                    <input type="radio" name="display_mode" value="json_api" {% if current_mode == 'json_api' %}checked{% endif %} onchange="toggleDisplayModeFields{{ screen.id }}()">
+                                    <div class="mode-content">
+                                        <span class="mode-icon">📊</span>
+                                        <span>JSON API</span>
+                                    </div>
+                                    <div class="mode-indicator"></div>
+                                </label>
+                            </div>
+
+                            <!-- Redirect URL Settings -->
+                            <div class="settings-card mode-field mode-redirect{{ screen.id }}" style="display: none;">
+                                <h4>🔗 Redirect Indstillinger</h4>
+                                <div class="form-group">
+                                    <label>URL til redirect</label>
+                                    <input type="url" name="redirect_url" value="{{ screen.redirect_url or '' }}" placeholder="https://example.com">
+                                    <small style="color: #718096; display: block; margin-top: 5px;">Skærmen viderestiller automatisk til denne URL</small>
                                 </div>
                             </div>
 
-                            <!-- Redirect URL field -->
-                            <div class="form-group mode-field mode-redirect{{ screen.id }}" style="display: none;">
-                                <label style="color: white;">🔗 Redirect URL</label>
-                                <input type="url" name="redirect_url" value="{{ screen.redirect_url or '' }}" placeholder="https://example.com">
-                                <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Skærmen viderestiller til denne URL</div>
-                            </div>
-
-                            <!-- iFrame URL field -->
-                            <div class="mode-field mode-iframe{{ screen.id }}" style="display: none;">
+                            <!-- iFrame Settings -->
+                            <div class="settings-card mode-field mode-iframe{{ screen.id }}" style="display: none;">
+                                <h4>🖼️ iFrame Indstillinger</h4>
                                 <div class="form-group">
-                                    <label style="color: white;">🖼️ iFrame URL</label>
+                                    <label>URL til iFrame</label>
                                     <input type="url" name="iframe_url" value="{{ screen.iframe_url or '' }}" placeholder="https://example.com">
-                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vis ekstern hjemmeside i fuld skærm</div>
+                                    <small style="color: #718096; display: block; margin-top: 5px;">Vis ekstern hjemmeside i fuld skærm</small>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                                     <div class="form-group">
-                                        <label style="color: white;">← Venstre Margin (px)</label>
+                                        <label>← Venstre Margin (px)</label>
                                         <input type="number" name="iframe_margin_left" value="{{ screen.iframe_margin_left or 0 }}" min="0" max="1000" placeholder="0">
-                                        <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Skub indhold fra venstre</div>
+                                        <small style="color: #718096;">Skub indhold fra venstre</small>
                                     </div>
                                     <div class="form-group">
-                                        <label style="color: white;">Højre Margin (px) →</label>
+                                        <label>Højre Margin (px) →</label>
                                         <input type="number" name="iframe_margin_right" value="{{ screen.iframe_margin_right or 0 }}" min="0" max="1000" placeholder="0">
-                                        <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Skub indhold fra højre</div>
+                                        <small style="color: #718096;">Skub indhold fra højre</small>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- JSON API fields -->
-                            <div class="mode-field mode-json_api{{ screen.id }}" style="display: none;">
+                            <!-- JSON API Settings -->
+                            <div class="settings-card mode-field mode-json_api{{ screen.id }}" style="display: none;">
+                                <h4>📊 JSON API Indstillinger</h4>
                                 <div class="form-group">
-                                    <label style="color: white;">📊 JSON API URL</label>
+                                    <label>JSON API URL</label>
                                     <input type="url" name="json_api_url" value="{{ screen.json_api_url or '' }}" placeholder="https://api.example.com/data">
-                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">URL til JSON data (f.eks. aktivitetsplan)</div>
+                                    <small style="color: #718096; display: block; margin-top: 5px;">URL til JSON data (f.eks. aktivitetsplan)</small>
                                 </div>
                                 <div class="form-group">
-                                    <label style="color: white;">🎨 Display Template</label>
-                                    <select name="json_template" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+                                    <label>Display Template</label>
+                                    <select name="json_template" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e0; background: white;">
                                         <option value="schedule" {% if screen.json_template == 'schedule' or not screen.json_template %}selected{% endif %}>📅 Kort Visning (cards)</option>
                                         <option value="table" {% if screen.json_template == 'table' %}selected{% endif %}>📊 Tabel - Lille (kompakt)</option>
                                         <option value="table-large" {% if screen.json_template == 'table-large' %}selected{% endif %}>📊 Tabel - Stor (romslig)</option>
@@ -701,42 +1075,42 @@
                                         <option value="compact" {% if screen.json_template == 'compact' %}selected{% endif %}>📋 Kompakt - Lille</option>
                                         <option value="compact-large" {% if screen.json_template == 'compact-large' %}selected{% endif %}>📋 Kompakt - Stor</option>
                                     </select>
-                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Vælg hvordan aktivitetsdata skal vises på skærmen</div>
+                                    <small style="color: #718096; display: block; margin-top: 5px;">Vælg hvordan aktivitetsdata skal vises på skærmen</small>
                                 </div>
-                                <div class="form-group">
-                                    <label style="color: white;">🎨 MAGION Logo</label>
+
+                                <div class="form-group" style="margin-top: 20px;">
+                                    <label>🎨 MAGION Logo</label>
                                     {% if screen.magion_logo_path %}
                                     <div style="margin-bottom: 10px;">
                                         <img src="{{ screen.magion_logo_path }}" alt="MAGION logo" style="max-width: 200px; max-height: 60px; background: #EF7D00; padding: 5px; border-radius: 4px;">
                                     </div>
                                     {% endif %}
-                                    <input type="file" name="magion_logo" accept="image/*" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
-                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload MAGION logo (hvid logo anbefalet). Lad tom for at bruge standard logo.</div>
+                                    <input type="file" name="magion_logo" accept="image/*">
+                                    <small style="color: #718096; display: block; margin-top: 5px;">Upload MAGION logo (hvid logo anbefalet). Lad tom for at bruge standard logo.</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label style="color: white;">🏢 Hovedsponsor Logo</label>
+                                    <label>🏢 Hovedsponsor Logo</label>
                                     {% if screen.sponsor_logo_path %}
                                     <div style="margin-bottom: 10px;">
                                         <img src="{{ screen.sponsor_logo_path }}" alt="Sponsor logo" style="max-width: 200px; max-height: 60px; background: white; padding: 5px; border-radius: 4px;">
                                     </div>
                                     {% endif %}
-                                    <input type="file" name="sponsor_logo" accept="image/*" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
-                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload sponsor logo der vises centreret i header (anbefalet: hvid logo på transparent baggrund)</div>
+                                    <input type="file" name="sponsor_logo" accept="image/*">
+                                    <small style="color: #718096; display: block; margin-top: 5px;">Upload sponsor logo der vises centreret i header (anbefalet: hvid logo på transparent baggrund)</small>
                                 </div>
 
-                                <div class="form-group" style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px; margin-top: 20px;">
-                                    <label style="color: white; font-size: 16px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <div style="border-top: 2px solid #e2e8f0; padding-top: 20px; margin-top: 20px;">
+                                    <label style="font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; color: #2d3748;">
+                                        <input type="checkbox" name="carousel_enabled" value="true" {% if screen.carousel_enabled %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer; accent-color: #EF7D00;">
                                         🎠 Sponsor Carousel (bund af skærm)
-                                        <input type="checkbox" name="carousel_enabled" value="true" {% if screen.carousel_enabled %}checked{% endif %}
-                                               style="width: 20px; height: 20px; cursor: pointer;">
                                     </label>
-                                    <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 15px;">Aktiver for at vise scrollende sponsor logoer i bunden af skærmen</div>
+                                    <small style="color: #718096; display: block; margin-bottom: 15px;">Aktiver for at vise scrollende sponsor logoer i bunden af skærmen</small>
 
                                     <div id="carouselSettings{{ screen.id }}" style="{% if not screen.carousel_enabled %}display: none;{% endif %}">
                                         <div class="form-group">
-                                            <label style="color: white;">⚡ Scroll Hastighed</label>
-                                            <select name="carousel_speed" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+                                            <label>⚡ Scroll Hastighed</label>
+                                            <select name="carousel_speed">
                                                 <option value="slow" {% if screen.carousel_speed == 'slow' %}selected{% endif %}>🐌 Langsom (60s)</option>
                                                 <option value="medium" {% if screen.carousel_speed == 'medium' or not screen.carousel_speed %}selected{% endif %}>🚶 Medium (40s)</option>
                                                 <option value="fast" {% if screen.carousel_speed == 'fast' %}selected{% endif %}>🏃 Hurtig (25s)</option>
@@ -744,28 +1118,29 @@
                                         </div>
 
                                         <div class="form-group">
-                                            <label style="color: white;">📤 Upload Sponsor Logoer</label>
+                                            <label>📤 Sponsor Logoer</label>
                                             <div id="carouselLogos{{ screen.id }}" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
                                                 {% for sponsor in screen.carousel_sponsors %}
-                                                <div class="carousel-logo-item" style="position: relative; background: white; padding: 5px; border-radius: 4px;">
+                                                <div class="carousel-logo-item" style="position: relative; background: white; padding: 5px; border-radius: 4px; border: 1px solid #e2e8f0;">
                                                     <img src="{{ sponsor.filename }}" alt="{{ sponsor.original_filename }}" style="height: 50px; width: auto; max-width: 120px; object-fit: contain;">
                                                     <button type="button" onclick="deleteCarouselSponsor({{ screen.id }}, {{ sponsor.id }})" style="position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; line-height: 1;">×</button>
                                                 </div>
                                                 {% endfor %}
                                             </div>
                                             <input type="file" id="carouselUpload{{ screen.id }}" multiple accept="image/*" style="display: none;" onchange="uploadCarouselSponsors({{ screen.id }})">
-                                            <button type="button" onclick="document.getElementById('carouselUpload{{ screen.id }}').click()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer;">
+                                            <button type="button" onclick="document.getElementById('carouselUpload{{ screen.id }}').click()" class="btn btn-secondary" style="width: 100%;">
                                                 ➕ Tilføj Sponsor Logoer
                                             </button>
-                                            <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Upload flere sponsor logoer (PNG/JPG med transparent baggrund anbefalet)</div>
+                                            <small style="color: #718096; display: block; margin-top: 5px;">Upload flere sponsor logoer (PNG/JPG med transparent baggrund anbefalet)</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn" style="background: white; color: #667eea; width: 100%;">💾 Gem Indstillinger</button>
-                        </form>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Gem Indstillinger</button>
+                        </div>
                     </div>
+                </form>
 
                     <script>
                     function toggleDisplayModeFields{{ screen.id }}() {
@@ -1043,6 +1418,16 @@
         </div>
     </div>
 </div>
+
+<!-- GLOBAL QR CODE MODAL -->
+<div id="globalQRModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; text-align: center;">
+        <h2 style="margin-top: 0;" id="qrModalTitle">QR Kode</h2>
+        <img id="globalQRImage" src="" alt="QR Code" style="max-width: 300px; margin: 20px auto; display: block;">
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; word-break: break-all; margin: 20px 0;" id="globalQRURL"></div>
+        <button onclick="closeGlobalQRModal()" class="btn btn-secondary" style="width: 100%;">Luk</button>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1306,10 +1691,25 @@ function showQRCode(screenId) {
     fetch(`/screen/${screenId}/qr`)
         .then(response => response.json())
         .then(data => {
-            document.getElementById('qrImage' + screenId).src = data.qr_code;
-            document.getElementById('qrURL' + screenId).textContent = data.url;
-            document.getElementById('qrDisplay' + screenId).style.display = 'block';
+            // Use global modal
+            document.getElementById('qrModalTitle').textContent = `QR Kode - ${data.screen_name || 'Skærm'}`;
+            document.getElementById('globalQRImage').src = data.qr_code;
+            document.getElementById('globalQRURL').textContent = data.url;
+            document.getElementById('globalQRModal').style.display = 'flex';
+
+            // Also update screen-specific displays if they exist
+            const screenQRImage = document.getElementById('qrImage' + screenId);
+            const screenQRURL = document.getElementById('qrURL' + screenId);
+            const screenQRDisplay = document.getElementById('qrDisplay' + screenId);
+
+            if (screenQRImage) screenQRImage.src = data.qr_code;
+            if (screenQRURL) screenQRURL.textContent = data.url;
+            if (screenQRDisplay) screenQRDisplay.style.display = 'block';
         });
+}
+
+function closeGlobalQRModal() {
+    document.getElementById('globalQRModal').style.display = 'none';
 }
 
 function copyScreenURL(url) {

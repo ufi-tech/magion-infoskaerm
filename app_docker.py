@@ -743,7 +743,11 @@ def screen_qr_code(screen_id):
     screen_url = request.host_url.rstrip('/') + url_for('display_screen', screen_uuid=screen.uuid)
     qr_code = generate_qr_code(screen_url)
 
-    return jsonify({'qr_code': qr_code, 'url': screen_url})
+    return jsonify({
+        'qr_code': qr_code,
+        'url': screen_url,
+        'screen_name': screen.name
+    })
 
 @app.route('/screen/<int:screen_id>/assign-media', methods=['POST'])
 @login_required

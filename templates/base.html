@@ -356,36 +356,8 @@
             <!-- Navigation -->
             <div class="header-nav">
                 <a href="{{ url_for('dashboard') }}" class="nav-btn active">
-                    📺 Dashboard
+                    🏠 Forside
                 </a>
-
-                <!-- Screens Dropdown -->
-                <div class="dropdown" id="screensDropdown">
-                    <button class="nav-btn" onclick="toggleDropdown('screensDropdown')">
-                        🖥️ Skærme
-                        <span style="font-size: 10px;">▼</span>
-                    </button>
-                    <div class="dropdown-menu">
-                        <a href="{{ url_for('dashboard') }}" class="dropdown-item active">
-                            🌍 Global Media
-                        </a>
-                        <div class="divider"></div>
-                        {% for screen in screens|default([]) %}
-                        <a href="{{ url_for('dashboard') }}#screen-{{ screen.id }}"
-                           class="dropdown-item"
-                           onclick="switchTab('screen-{{ screen.id }}'); closeAllDropdowns();">
-                            📺 {{ screen.name }}
-                            {% if screen.media_items|length > 0 %}
-                            <span class="screen-badge">{{ screen.media_items|length }}</span>
-                            {% endif %}
-                        </a>
-                        {% endfor %}
-                        <div class="divider"></div>
-                        <div class="dropdown-item" onclick="openCreateScreenModal(); closeAllDropdowns();">
-                            ➕ Opret Ny Skærm
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- User Menu -->
