@@ -499,6 +499,9 @@
                 {% endif %}
             </button>
             {% endfor %}
+            <button class="tab-button" onclick="switchTab('system-info')">
+                💾 System Info
+            </button>
         </div>
 
         <!-- GLOBAL MEDIA TAB -->
@@ -906,6 +909,39 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- SYSTEM INFO TAB -->
+        <div id="tab-system-info" class="tab-content">
+            <div class="screen-header">
+                <div class="screen-info">
+                    <h2>💾 System Information</h2>
+                    <p style="color: #718096; margin: 0;">Cache status og system ressourcer</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📊 Cache Statistik</h3>
+                <div id="cacheStats" style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <p style="text-align: center; color: #718096;">Indlæser cache information...</p>
+                </div>
+            </div>
+
+            <div class="section" style="margin-top: 20px;">
+                <h3>🧹 Cache Kontrol</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="refreshCacheInfo()" class="btn btn-primary" style="flex: 1; min-width: 200px;">
+                        🔄 Genindlæs Information
+                    </button>
+                    <button onclick="clearBrowserCache()" class="btn btn-warning" style="flex: 1; min-width: 200px;">
+                        🗑️ Ryd Browser Cache (Admin)
+                    </button>
+                </div>
+                <p style="margin-top: 10px; font-size: 12px; color: #718096;">
+                    💡 Service Worker cache ryddes automatisk når skærme loader nye filer.
+                    Browser cache limits: 100 MB eller 100 filer per enhed.
+                </p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1001,6 +1037,75 @@
 
 {% block extra_js %}
 <script>
+// Cache management functions (global scope)
+async function refreshCacheInfo() {
+    const cacheStatsDiv = document.getElementById('cacheStats');
+    cacheStatsDiv.innerHTML = '<p style="text-align: center; color: #718096;">Indlæser...</p>';
+
+    try {
+        const response = await fetch('/api/cache-info');
+        const data = await response.json();
+
+        const html = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <div style="font-size: 12px; color: #718096; margin-bottom: 5px;">Optimerede Media</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #667eea;">${data.optimized_folder.size_mb.toFixed(1)} MB</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">${data.optimized_folder.count} filer</div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #48bb78;">
+                    <div style="font-size: 12px; color: #718096; margin-bottom: 5px;">Uploads (logos mv.)</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #48bb78;">${data.uploads_folder.size_mb.toFixed(1)} MB</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">${data.uploads_folder.count} filer</div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 12px; color: #718096; margin-bottom: 5px;">Total Server Storage</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">${data.total_size_mb.toFixed(1)} MB</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">${data.total_media_db} media i database</div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <div style="font-size: 12px; color: #718096; margin-bottom: 5px;">Aktive Media</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #10b981;">${data.active_media_db}</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">filer synlige på skærme</div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px;">
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">📱 Browser Cache (per enhed)</div>
+                <div style="font-size: 12px; color: #718096;">
+                    • Max 100 MB eller 100 filer<br>
+                    • Ryddes automatisk ved overskridelse<br>
+                    • Gamle/slettede filer fjernes automatisk<br>
+                    • Service Worker version: v3
+                </div>
+            </div>
+        `;
+
+        cacheStatsDiv.innerHTML = html;
+    } catch (error) {
+        cacheStatsDiv.innerHTML = `<p style="color: #e53e3e;">Fejl ved indlæsning: ${error.message}</p>`;
+    }
+}
+
+async function clearBrowserCache() {
+    if (!confirm('Dette rydder DENNE browsers cache.\n\nBemærk: For at rydde cache på skærme skal du genindlæse skærmene (F5).\n\nForsæt?')) {
+        return;
+    }
+
+    try {
+        // Clear Service Worker caches
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+
+        // Clear localStorage
+        localStorage.clear();
+
+        alert('Browser cache ryddet! 🧹\n\nSiden genindlæses nu...');
+        window.location.reload();
+    } catch (error) {
+        alert('Fejl ved rydning af cache: ' + error.message);
+    }
+}
+
 function switchTab(tabId) {
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -1347,6 +1452,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleGlobalFileSelect(input);
             }
         });
+    });
+
+    // Load cache info when system info tab is opened
+    document.querySelector('[onclick*="system-info"]')?.addEventListener('click', () => {
+        setTimeout(refreshCacheInfo, 100);
     });
 
     // Run cleanup check every hour

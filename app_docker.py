@@ -638,6 +638,58 @@ def get_media_expire_status(media_id):
         'is_expired': is_expired
     })
 
+@app.route('/api/cache-info')
+@login_required
+def get_cache_info():
+    """Get cache information - media files size"""
+    import os
+
+    cache_info = {
+        'optimized_folder': {
+            'path': app.config['OPTIMIZED_FOLDER'],
+            'size': 0,
+            'count': 0,
+            'files': []
+        },
+        'uploads_folder': {
+            'path': app.config['UPLOAD_FOLDER'],
+            'size': 0,
+            'count': 0
+        },
+        'total_media_db': Media.query.count(),
+        'active_media_db': Media.query.filter_by(active=True).count()
+    }
+
+    # Calculate optimized folder size
+    if os.path.exists(app.config['OPTIMIZED_FOLDER']):
+        for filename in os.listdir(app.config['OPTIMIZED_FOLDER']):
+            filepath = os.path.join(app.config['OPTIMIZED_FOLDER'], filename)
+            if os.path.isfile(filepath):
+                size = os.path.getsize(filepath)
+                cache_info['optimized_folder']['size'] += size
+                cache_info['optimized_folder']['count'] += 1
+                cache_info['optimized_folder']['files'].append({
+                    'name': filename,
+                    'size': size,
+                    'modified': os.path.getmtime(filepath)
+                })
+
+    # Calculate uploads folder size
+    if os.path.exists(app.config['UPLOAD_FOLDER']):
+        for root, dirs, files in os.walk(app.config['UPLOAD_FOLDER']):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                if os.path.isfile(filepath):
+                    cache_info['uploads_folder']['size'] += os.path.getsize(filepath)
+                    cache_info['uploads_folder']['count'] += 1
+
+    # Convert to MB
+    cache_info['optimized_folder']['size_mb'] = cache_info['optimized_folder']['size'] / (1024 * 1024)
+    cache_info['uploads_folder']['size_mb'] = cache_info['uploads_folder']['size'] / (1024 * 1024)
+    cache_info['total_size_mb'] = (cache_info['optimized_folder']['size'] + cache_info['uploads_folder']['size']) / (1024 * 1024)
+
+    return jsonify(cache_info)
+
 # ========== SCREEN MANAGEMENT ROUTES ==========
 
 @app.route('/screen/create', methods=['POST'])

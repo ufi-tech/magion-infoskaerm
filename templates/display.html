@@ -461,11 +461,7 @@
                     return;
                 }
 
-                // Guard against mediaList corruption
-                if (this.mediaList.length !== 48) {
-                    debugLog(`WARNING: mediaList.length changed from 48 to ${this.mediaList.length}!`);
-                    debugLog(`mediaList type: ${typeof this.mediaList}, Array.isArray: ${Array.isArray(this.mediaList)}`);
-                }
+                // Guard against mediaList corruption (removed hardcoded check)
 
                 const oldIndex = this.currentIndex;
                 this.currentIndex = (this.currentIndex + 1) % this.mediaList.length;
@@ -539,11 +535,45 @@
             });
         }
 
+        // Cleanup old cached files on page load
+        async function cleanupOldCache() {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                try {
+                    const messageChannel = new MessageChannel();
+
+                    // Wait for response
+                    const cleanupPromise = new Promise((resolve) => {
+                        messageChannel.port1.onmessage = (event) => {
+                            if (event.data.type === 'CLEANUP_COMPLETE') {
+                                console.log(`🧹 Cleaned up ${event.data.deletedCount} old cached files`);
+                                resolve(event.data.deletedCount);
+                            }
+                        };
+                    });
+
+                    // Send cleanup request with current media list
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'CLEANUP_OLD_CACHE',
+                        mediaList: mediaList
+                    }, [messageChannel.port2]);
+
+                    await cleanupPromise;
+                } catch (error) {
+                    console.error('Cache cleanup failed:', error);
+                }
+            }
+        }
+
         // Start when page loads
         window.addEventListener('load', () => {
             // debugLog('PAGE LOADED - Starting InfoScreen');
             currentScreen = new InfoScreen();
             currentScreen.init();
+
+            // Cleanup old cache after 5 seconds (let page load first)
+            setTimeout(() => {
+                cleanupOldCache();
+            }, 5000);
         });
 
         // Online/Offline detection
@@ -582,8 +612,11 @@
         }, 30000); // Check every 30 seconds
 
         // Check for media list updates periodically
+        {% if screen_uuid %}
+        // For screen-specific displays, no automatic reload (changes detected via settings check below)
+        {% else %}
+        // For global display, check global media list
         setInterval(() => {
-            // Skip check if offline
             if (!navigator.onLine) {
                 console.log('Skipping media check - offline');
                 return;
@@ -592,20 +625,16 @@
             fetch('/api/media-list')
                 .then(response => response.json())
                 .then(newList => {
-                    // Update localStorage cache with fresh data
                     localStorage.setItem('mediaList_cache', JSON.stringify(newList));
                     localStorage.setItem('mediaList_cache_time', Date.now());
 
-                    // Compare with current screen's media list, not the global constant
                     if (currentScreen) {
-                        // Only check lengths first - much more reliable than JSON stringify
                         if (newList.length !== currentScreen.mediaList.length) {
                             console.log(`Media count changed: ${currentScreen.mediaList.length} → ${newList.length} - reloading`);
                             window.location.reload();
                             return;
                         }
 
-                        // If lengths match, do a more detailed comparison
                         let hasChanged = false;
                         for (let i = 0; i < newList.length; i++) {
                             if (newList[i].path !== currentScreen.mediaList[i].path ||
@@ -624,12 +653,12 @@
                 })
                 .catch(error => {
                     console.error('Error checking for updates (kan være offline):', error);
-                    // If offline, show indicator
                     if (!navigator.onLine && currentScreen) {
                         currentScreen.showOfflineIndicator();
                     }
                 });
         }, 60000); // Check every minute
+        {% endif %}
 
         {% if screen_uuid %}
         // Check for screen settings changes (display mode, etc) - only for specific screens
