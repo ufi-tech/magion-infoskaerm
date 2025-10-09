@@ -605,6 +605,36 @@
         transform: scale(1.1);
     }
 
+    /* Mode Badges */
+    .mode-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .mode-badge-media {
+        background: #E8F5E9;
+        color: #2E7D32;
+    }
+
+    .mode-badge-redirect {
+        background: #FFF3E0;
+        color: #EF6C00;
+    }
+
+    .mode-badge-iframe {
+        background: #E3F2FD;
+        color: #1565C0;
+    }
+
+    .mode-badge-json {
+        background: #F3E5F5;
+        color: #7B1FA2;
+    }
+
     .grid-2col {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -818,10 +848,34 @@
 
                         <!-- Card Content -->
                         <div class="screen-card-content">
-                            <h3 class="screen-card-title">{{ screen.name }}</h3>
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                <h3 class="screen-card-title" style="margin: 0;">{{ screen.name }}</h3>
+                                {% set current_mode = screen.display_mode or 'media' %}
+                                {% if screen.redirect_enabled and screen.redirect_url %}
+                                    {% set current_mode = 'redirect' %}
+                                {% endif %}
+
+                                {% if current_mode == 'media' %}
+                                    <span class="mode-badge mode-badge-media">📺 Media</span>
+                                {% elif current_mode == 'redirect' %}
+                                    <span class="mode-badge mode-badge-redirect">🔗 Redirect</span>
+                                {% elif current_mode == 'iframe' %}
+                                    <span class="mode-badge mode-badge-iframe">🖼️ iFrame</span>
+                                {% elif current_mode == 'json_api' %}
+                                    <span class="mode-badge mode-badge-json">📊 JSON API</span>
+                                {% endif %}
+                            </div>
                             <div class="screen-card-meta">
                                 <span>📍 {{ screen.location or 'Ingen lokation' }}</span>
-                                <span>🎬 {{ screen.media_associations|length }} media</span>
+                                {% if current_mode == 'media' %}
+                                    <span>🎬 {{ screen.media_associations|length }} media</span>
+                                {% elif current_mode == 'json_api' and screen.json_api_url %}
+                                    <span style="font-size: 11px; color: #9ca3af;">{{ screen.json_template or 'schedule' }} template</span>
+                                {% elif current_mode == 'iframe' and screen.iframe_url %}
+                                    <span style="font-size: 11px; color: #9ca3af;">{{ screen.iframe_url[:30] }}...</span>
+                                {% elif current_mode == 'redirect' and screen.redirect_url %}
+                                    <span style="font-size: 11px; color: #9ca3af;">{{ screen.redirect_url[:30] }}...</span>
+                                {% endif %}
                             </div>
                             <div class="screen-card-actions" onclick="event.stopPropagation()">
                                 <button onclick="switchTab('screen-{{ screen.id }}')" class="btn-icon" title="Administrer">⚙️</button>
