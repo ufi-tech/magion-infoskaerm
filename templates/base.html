@@ -10,364 +10,485 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f7fa;
             min-height: 100vh;
         }
-        
-        .container {
-            max-width: 1200px;
+
+        /* Magion Header */
+        .magion-header {
+            background: #EF7D00; /* Magion Orange - PANTONE 151 C */
+            box-shadow: 0 4px 20px rgba(239, 125, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .header {
-            background: white;
-            padding: 0;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            display: flex;
-            justify-content: space-between;
-            align-items: stretch;
-            overflow: visible;
-            position: relative;
-        }
-
-        .header-brand {
-            padding: 20px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 280px;
-            border-radius: 12px 0 0 12px;
-        }
-
-        .header-brand h1 {
-            color: white;
-            font-size: 22px;
-            margin: 0;
-            font-weight: 600;
-        }
-
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .nav-container {
-            flex: 1;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 30px;
+            height: 70px;
         }
 
-        .nav-main {
+        .header-logo {
             display: flex;
-            gap: 8px;
             align-items: center;
-        }
-
-        .nav-item {
-            position: relative;
-            color: #4a5568;
+            gap: 15px;
             text-decoration: none;
-            font-weight: 500;
-            font-size: 14px;
-            padding: 10px 16px;
+        }
+
+        .header-logo img {
+            height: 45px;
+            width: auto;
+        }
+
+        .header-title {
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Navigation */
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            margin: 0 40px;
+        }
+
+        .nav-btn {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 10px 20px;
             border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 6px;
-            cursor: pointer;
+            gap: 8px;
+            text-decoration: none;
         }
 
-        .nav-item:hover {
-            background: #f7fafc;
-            color: #667eea;
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
         }
 
-        .nav-item.active {
-            background: #e6f0ff;
-            color: #667eea;
+        .nav-btn.active {
+            background: rgba(255, 255, 255, 0.25);
         }
 
+        /* Dropdown Menus */
         .dropdown {
             position: relative;
         }
 
-        .dropdown-toggle {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .dropdown-toggle::after {
-            content: '▼';
-            font-size: 10px;
-            transition: transform 0.2s;
-        }
-
-        .dropdown:hover .dropdown-toggle::after {
-            transform: rotate(180deg);
-        }
-
         .dropdown-menu {
+            display: none;
             position: absolute;
-            top: calc(100% + 8px);
+            top: calc(100% + 10px);
             left: 0;
+            min-width: 250px;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-            min-width: 200px;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.2s;
-            z-index: 1000;
-            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            padding: 8px;
+            z-index: 1001;
+            animation: slideDown 0.2s ease;
         }
 
-        .dropdown:hover .dropdown-menu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown.open .dropdown-menu {
+            display: block;
         }
 
         .dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
             padding: 12px 16px;
             color: #4a5568;
             text-decoration: none;
-            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 8px;
             transition: all 0.2s;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .dropdown-item:last-child {
-            border-bottom: none;
+            cursor: pointer;
+            font-size: 14px;
         }
 
         .dropdown-item:hover {
             background: #f7fafc;
-            color: #667eea;
-            padding-left: 20px;
+            color: #EF7D00;
         }
 
+        .dropdown-item.active {
+            background: #FFF5EB;
+            color: #EF7D00;
+            font-weight: 600;
+        }
+
+        .screen-badge {
+            margin-left: auto;
+            padding: 4px 8px;
+            background: #FFF5EB;
+            color: #EF7D00;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* User Menu */
         .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 16px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
             position: relative;
         }
 
-        .user-menu:hover {
-            background: #f7fafc;
-        }
-
         .user-avatar {
-            width: 36px;
-            height: 36px;
+            width: 42px;
+            height: 42px;
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 600;
-            font-size: 14px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .user-dropdown {
+            right: 0;
+            left: auto;
         }
 
         .user-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 8px;
         }
 
         .user-name {
-            font-size: 14px;
             font-weight: 600;
             color: #2d3748;
+            font-size: 14px;
         }
 
         .user-role {
-            font-size: 11px;
+            font-size: 12px;
             color: #718096;
+            margin-top: 2px;
         }
 
-        @media (max-width: 968px) {
-            .header {
-                flex-direction: column;
-            }
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 8px 0;
+        }
 
-            .header-brand {
-                min-width: 100%;
-            }
-
-            .nav-container {
-                flex-direction: column;
-                align-items: stretch;
-                padding: 10px;
-            }
-
-            .nav-main {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            .nav-item {
-                width: 100%;
-            }
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: transform 0.3s;
-            text-decoration: none;
-            display: inline-block;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
-        }
-        
-        .content {
-            background: white;
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        
-        .flash-messages {
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             margin-bottom: 20px;
         }
-        
-        .flash {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 10px;
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .flash.success {
+
+        .btn-primary {
+            background: #EF7D00; /* Magion Orange */
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 125, 0, 0.4);
+            background: #D97000; /* Slightly darker on hover */
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .btn-danger {
+            background: #fc8181;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #f56565;
+        }
+
+        /* Flash Messages */
+        .flash-messages {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 30px;
+        }
+
+        .flash-message {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .flash-success {
             background: #c6f6d5;
-            color: #276749;
-            border: 1px solid #9ae6b4;
+            color: #22543d;
+            border-left: 4px solid #48bb78;
         }
-        
-        .flash.error {
+
+        .flash-error {
             background: #fed7d7;
             color: #742a2a;
-            border: 1px solid #fc8181;
+            border-left: 4px solid #f56565;
         }
+
+        .flash-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border-left: 4px solid #4299e1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 0 15px;
+            }
+
+            .header-logo img {
+                height: 35px;
+            }
+
+            .header-title {
+                display: none;
+            }
+
+            .header-nav {
+                margin: 0 15px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+        }
+
+        {% block extra_css %}{% endblock %}
     </style>
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="container">
-        {% if current_user.is_authenticated %}
-        <div class="header">
-            <div class="header-brand">
-                <div class="brand-icon">📺</div>
-                <h1>{{ site_settings.get('site_title', 'Magion') }}</h1>
-            </div>
+    <!-- Magion Header -->
+    <div class="magion-header">
+        <div class="header-container">
+            <!-- Logo -->
+            <a href="{{ url_for('dashboard') }}" class="header-logo">
+                <img src="{{ url_for('static', filename='Magion_kultur_Idraet_hvid.png') }}" alt="Magion">
+                <span class="header-title">Admin Dashboard</span>
+            </a>
 
-            <div class="nav-container">
-                <nav class="nav-main">
-                    <a href="{{ url_for('dashboard') }}" class="nav-item">
-                        <span>📺</span> Dashboard
-                    </a>
+            <!-- Navigation -->
+            <div class="header-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-btn active">
+                    📺 Dashboard
+                </a>
 
-                    {% if current_user.role == 'admin' or current_user.is_admin %}
-                    <div class="dropdown">
-                        <div class="nav-item dropdown-toggle">
-                            <span>⚙️</span> Admin
-                        </div>
-                        <div class="dropdown-menu">
-                            <a href="{{ url_for('users') }}" class="dropdown-item">
-                                <span>👥</span> Brugere
-                            </a>
-                            <a href="{{ url_for('login_history') }}" class="dropdown-item">
-                                <span>📊</span> Login Historik
-                            </a>
-                            <a href="{{ url_for('settings_page') }}" class="dropdown-item">
-                                <span>🎨</span> Indstillinger
-                            </a>
-                        </div>
-                    </div>
-                    {% endif %}
-                </nav>
-
-                <div class="dropdown user-menu">
-                    <div class="dropdown-toggle" style="gap: 12px;">
-                        <div class="user-avatar">{{ current_user.username[0].upper() }}</div>
-                        <div class="user-info">
-                            <div class="user-name">{{ current_user.username }}</div>
-                            <div class="user-role">{% if current_user.role == 'admin' or current_user.is_admin %}Administrator{% else %}Bruger{% endif %}</div>
-                        </div>
-                    </div>
-                    <div class="dropdown-menu" style="right: 0; left: auto;">
-                        <a href="{{ url_for('dashboard') }}" class="dropdown-item">
-                            <span>📺</span> Dashboard
+                <!-- Screens Dropdown -->
+                <div class="dropdown" id="screensDropdown">
+                    <button class="nav-btn" onclick="toggleDropdown('screensDropdown')">
+                        🖥️ Skærme
+                        <span style="font-size: 10px;">▼</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="{{ url_for('dashboard') }}" class="dropdown-item active">
+                            🌍 Global Media
                         </a>
-                        <a href="{{ url_for('change_password') }}" class="dropdown-item">
-                            <span>🔐</span> Skift Password
+                        <div class="divider"></div>
+                        {% for screen in screens|default([]) %}
+                        <a href="{{ url_for('dashboard') }}#screen-{{ screen.id }}"
+                           class="dropdown-item"
+                           onclick="switchTab('screen-{{ screen.id }}'); closeAllDropdowns();">
+                            📺 {{ screen.name }}
+                            {% if screen.media_items|length > 0 %}
+                            <span class="screen-badge">{{ screen.media_items|length }}</span>
+                            {% endif %}
                         </a>
-                        <a href="{{ url_for('logout') }}" class="dropdown-item" style="color: #e53e3e;">
-                            <span>🚪</span> Log ud
-                        </a>
+                        {% endfor %}
+                        <div class="divider"></div>
+                        <div class="dropdown-item" onclick="openCreateScreenModal(); closeAllDropdowns();">
+                            ➕ Opret Ny Skærm
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        {% endif %}
-        
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-        
-        <div class="content">
-            {% block content %}{% endblock %}
+
+            <!-- User Menu -->
+            <div class="dropdown user-menu" id="userDropdown">
+                <div class="user-avatar" onclick="toggleDropdown('userDropdown')">
+                    {{ current_user.username[0].upper() if current_user.is_authenticated else 'A' }}
+                </div>
+                <div class="dropdown-menu user-dropdown">
+                    <div class="user-info">
+                        <div class="user-name">{{ current_user.username if current_user.is_authenticated else 'Admin' }}</div>
+                        <div class="user-role">{{ 'Administrator' if current_user.role == 'admin' else 'Bruger' }}</div>
+                    </div>
+
+                    {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('users') }}" class="dropdown-item">
+                        👥 Brugerstyring
+                    </a>
+                    <a href="{{ url_for('login_history') }}" class="dropdown-item">
+                        📋 Login Historik
+                    </a>
+                    <div class="divider"></div>
+                    {% endif %}
+
+                    <div class="dropdown-item" onclick="switchTab('system-info'); closeAllDropdowns();">
+                        💾 System Info
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <a href="{{ url_for('change_password') }}" class="dropdown-item">
+                        🔐 Skift Password
+                    </a>
+
+                    <a href="{{ url_for('logout') }}" class="dropdown-item" style="color: #e53e3e;">
+                        🚪 Log Ud
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        <span style="font-size: 18px;">
+                            {% if category == 'success' %}✅
+                            {% elif category == 'error' %}❌
+                            {% else %}ℹ️{% endif %}
+                        </span>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Global JavaScript -->
+    <script>
+        // Dropdown Management
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            const isOpen = dropdown.classList.contains('open');
+
+            // Close all dropdowns
+            closeAllDropdowns();
+
+            // Toggle current dropdown
+            if (!isOpen) {
+                dropdown.classList.add('open');
+            }
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown').forEach(d => {
+                d.classList.remove('open');
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.addEventListener('click', (e) => {
+                if (!e.target.closest('.dropdown-item')) {
+                    e.stopPropagation();
+                }
+            });
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

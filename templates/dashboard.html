@@ -12,43 +12,7 @@
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin: 20px 0;
         overflow: hidden;
-    }
-
-    .tabs-header {
-        display: flex;
-        background: #f8f9fa;
-        border-bottom: 2px solid #e9ecef;
-        overflow-x: auto;
-        scrollbar-width: thin;
-    }
-
-    .tab-button {
-        padding: 16px 24px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        color: #6c757d;
-        border-bottom: 3px solid transparent;
-        transition: all 0.2s;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .tab-button:hover {
-        color: #495057;
-        background: rgba(102, 126, 234, 0.05);
-    }
-
-    .tab-button.active {
-        color: #667eea;
-        border-bottom-color: #667eea;
-        background: white;
     }
 
     .tab-content {
@@ -467,42 +431,9 @@
 {% endblock %}
 
 {% block content %}
-<div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1 style="margin: 0;">📺 Multi-Screen Dashboard</h1>
-        <button onclick="openCreateScreenModal()" class="btn btn-primary">+ Opret Ny Skærm</button>
-    </div>
-
+<div style="max-width: 1400px; margin: 0 auto;">
+    <!-- Content Container -->
     <div class="tabs-container">
-        <div class="tabs-header">
-            <button class="tab-button active" onclick="switchTab('global')">
-                🌍 Global Media
-            </button>
-            {% for screen in screens %}
-            <button class="tab-button" onclick="switchTab('screen-{{ screen.id }}')">
-                📺 {{ screen.name }}
-                {% set display_mode = screen.display_mode or 'media' %}
-                {% if screen.redirect_enabled and screen.redirect_url %}
-                    {% set display_mode = 'redirect' %}
-                {% endif %}
-
-                {% if display_mode == 'redirect' %}
-                <span class="badge badge-warning">🔗 Redirect</span>
-                {% elif display_mode == 'iframe' %}
-                <span class="badge badge-warning">🖼️ iFrame</span>
-                {% elif display_mode == 'json_api' %}
-                <span class="badge badge-warning">📊 JSON API</span>
-                {% elif screen.media_items|length > 0 %}
-                <span class="badge badge-success">{{ screen.media_items|length }}</span>
-                {% else %}
-                <span class="badge badge-info">Global</span>
-                {% endif %}
-            </button>
-            {% endfor %}
-            <button class="tab-button" onclick="switchTab('system-info')">
-                💾 System Info
-            </button>
-        </div>
 
         <!-- GLOBAL MEDIA TAB -->
         <div id="tab-global" class="tab-content active">
