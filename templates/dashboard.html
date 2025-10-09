@@ -847,7 +847,7 @@
                 {% if screens|length > 0 %}
                 <div class="screens-grid">
                     {% for screen in screens %}
-                    <div class="screen-card {% if not screen.active %}screen-inactive{% endif %}" onclick="switchTab('screen-{{ screen.id }}')">
+                    <div class="screen-card {% if not screen.active %}screen-inactive{% endif %}" onclick="switchTab('screen-{{ screen.id }}', event)">
                         <!-- Preview Image -->
                         <div class="screen-preview">
                             {% if screen.media_associations|length > 0 %}
@@ -901,7 +901,7 @@
                                 {% endif %}
                             </div>
                             <div class="screen-card-actions" onclick="event.stopPropagation()">
-                                <button onclick="switchTab('screen-{{ screen.id }}')" class="btn-icon" title="Administrer">⚙️</button>
+                                <button onclick="switchTab('screen-{{ screen.id }}', event); switchScreenTab({{ screen.id }}, 'settings')" class="btn-icon" title="Administrer">⚙️</button>
                                 <button onclick="showQRCode({{ screen.id }})" class="btn-icon" title="Vis QR Kode">📱</button>
                                 <button onclick="window.open('{{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}', '_blank')" class="btn-icon" title="Åbn display">🚀</button>
                             </div>
@@ -1005,16 +1005,16 @@
                 </div>
                 <div class="screen-actions">
                     <button onclick="showQRCode({{ screen.id }})" class="btn btn-secondary">📱 QR Kode</button>
-                    <button onclick="copyScreenURL('{{ url_for('display_screen', screen_uuid=screen.uuid, _external=True) }}')" class="btn btn-secondary">🔗 Kopi URL</button>
+                    <button onclick="copyScreenURL({{ url_for('display_screen', screen_uuid=screen.uuid, _external=True)|tojson }})" class="btn btn-secondary">🔗 Kopi URL</button>
                     <div class="toggle-switch {% if screen.active %}active{% endif %}" onclick="toggleScreen({{ screen.id }}, this)"></div>
                     <div class="screen-menu">
                         <button class="screen-menu-button" onclick="toggleScreenMenu({{ screen.id }}, event)">⋮</button>
                         <div class="screen-menu-dropdown" id="screenMenu{{ screen.id }}">
-                            <div class="screen-menu-item" onclick="openEditScreenModal({{ screen.id }}, '{{ screen.name }}', '{{ screen.location or '' }}', '{{ screen.description or '' }}')">
+                            <div class="screen-menu-item" onclick="openEditScreenModal({{ screen.id }}, {{ screen.name|tojson }}, {{ (screen.location or '')|tojson }}, {{ (screen.description or '')|tojson }})">
                                 ✏️ Rediger skærm
                             </div>
                             {% if user.role == 'admin' or user.is_admin %}
-                            <div class="screen-menu-item danger" onclick="confirmDeleteScreen({{ screen.id }}, '{{ screen.name }}')">
+                            <div class="screen-menu-item danger" onclick="confirmDeleteScreen({{ screen.id }}, {{ screen.name|tojson }})">
                                 🗑️ Slet skærm
                             </div>
                             {% endif %}
@@ -1025,13 +1025,13 @@
 
             <!-- Screen Tabs -->
             <div class="screen-tabs">
-                <button class="screen-tab active" onclick="switchScreenTab({{ screen.id }}, 'upload')">
+                <button class="screen-tab active" data-tab="upload" onclick="switchScreenTab({{ screen.id }}, 'upload')">
                     📤 Upload
                 </button>
-                <button class="screen-tab" onclick="switchScreenTab({{ screen.id }}, 'settings')">
+                <button class="screen-tab" data-tab="settings" onclick="switchScreenTab({{ screen.id }}, 'settings')">
                     ⚙️ Indstillinger
                 </button>
-                <button class="screen-tab" onclick="switchScreenTab({{ screen.id }}, 'media')">
+                <button class="screen-tab" data-tab="media" onclick="switchScreenTab({{ screen.id }}, 'media')">
                     🎬 Media ({{ screen.media_associations|length }})
                 </button>
             </div>
@@ -1222,7 +1222,9 @@
                     <script>
                     function toggleDisplayModeFields{{ screen.id }}() {
                         const form = document.getElementById('displayModeForm{{ screen.id }}');
-                        const selectedMode = form.querySelector('input[name="display_mode"]:checked').value;
+                        // Find the selected radio safely within this form; default to 'media' if none is checked
+                        const selectedRadio = form.querySelector('input[name="display_mode"]:checked');
+                        const selectedMode = selectedRadio ? selectedRadio.value : 'media';
 
                         // Hide all mode-specific fields
                         form.querySelectorAll('.mode-field').forEach(field => {
@@ -1238,11 +1240,19 @@
                     // Initialize on page load
                     toggleDisplayModeFields{{ screen.id }}();
 
-                    // Toggle carousel settings visibility
-                    document.querySelector('input[name="carousel_enabled"]').addEventListener('change', function() {
-                        const settings = document.getElementById('carouselSettings{{ screen.id }}');
-                        settings.style.display = this.checked ? 'block' : 'none';
-                    });
+                    // Toggle carousel settings visibility (scoped to this form)
+                    (function() {
+                        const form = document.getElementById('displayModeForm{{ screen.id }}');
+                        const carouselEl = form ? form.querySelector('input[name="carousel_enabled"]') : null;
+                        if (carouselEl) {
+                            carouselEl.addEventListener('change', function() {
+                                const settings = document.getElementById('carouselSettings{{ screen.id }}');
+                                if (settings) {
+                                    settings.style.display = this.checked ? 'block' : 'none';
+                                }
+                            });
+                        }
+                    })();
 
                     // Upload carousel sponsors
                     async function uploadCarouselSponsors(screenId) {
@@ -1578,19 +1588,16 @@ async function clearBrowserCache() {
     }
 }
 
-function switchTab(tabId) {
+function switchTab(tabId, evt) {
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
 
     // Show selected tab
     document.getElementById('tab-' + tabId).classList.add('active');
-    if (event && event.target) {
-        event.target.classList.add('active');
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
     }
-
-    // Save current tab to localStorage
-    localStorage.setItem('magion_current_tab', tabId);
 }
 
 // Screen Tab Switching
@@ -1604,36 +1611,11 @@ function switchScreenTab(screenId, tabName) {
     });
 
     // Show selected tab
-    const tabButton = document.querySelector(`#tab-screen-${screenId} .screen-tab[onclick*="${tabName}"]`);
+    const tabButton = document.querySelector(`#tab-screen-${screenId} .screen-tab[data-tab="${tabName}"]`);
     const tabContent = document.getElementById(`screen${screenId}-tab-${tabName}`);
 
     if (tabButton) tabButton.classList.add('active');
     if (tabContent) tabContent.classList.add('active');
-
-    // Save current screen tab to localStorage
-    localStorage.setItem('magion_current_screen_tab', `${screenId}-${tabName}`);
-}
-
-// Restore last viewed tab on page load
-function restoreLastTab() {
-    const lastTab = localStorage.getItem('magion_current_tab');
-    const lastScreenTab = localStorage.getItem('magion_current_screen_tab');
-
-    if (lastTab && lastTab !== 'global') {
-        const tabElement = document.getElementById('tab-' + lastTab);
-        if (tabElement) {
-            // Hide all tabs first
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            // Show saved tab
-            tabElement.classList.add('active');
-
-            // Restore screen sub-tab if exists
-            if (lastScreenTab) {
-                const [screenId, tabName] = lastScreenTab.split('-');
-                setTimeout(() => switchScreenTab(screenId, tabName), 100);
-            }
-        }
-    }
 }
 
 // Drag and Drop for Media Reordering
@@ -2090,9 +2072,6 @@ function bulkDeleteScreen(screenId) {
 
 // Drag and drop support
 document.addEventListener('DOMContentLoaded', function() {
-    // Restore last viewed tab
-    restoreLastTab();
-
     // Close screen menu when clicking outside
     document.addEventListener('click', function() {
         document.querySelectorAll('.screen-menu-dropdown').forEach(m => {
