@@ -775,6 +775,29 @@
         border: 2px dashed #EF7D00;
         background: #FFF5EB;
     }
+
+    /* Toast Animations */
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slideOutRight {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -1562,7 +1585,12 @@ function switchTab(tabId) {
 
     // Show selected tab
     document.getElementById('tab-' + tabId).classList.add('active');
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+
+    // Save current tab to localStorage
+    localStorage.setItem('magion_current_tab', tabId);
 }
 
 // Screen Tab Switching
@@ -1576,8 +1604,36 @@ function switchScreenTab(screenId, tabName) {
     });
 
     // Show selected tab
-    document.querySelector(`#tab-screen-${screenId} .screen-tab[onclick*="${tabName}"]`).classList.add('active');
-    document.getElementById(`screen${screenId}-tab-${tabName}`).classList.add('active');
+    const tabButton = document.querySelector(`#tab-screen-${screenId} .screen-tab[onclick*="${tabName}"]`);
+    const tabContent = document.getElementById(`screen${screenId}-tab-${tabName}`);
+
+    if (tabButton) tabButton.classList.add('active');
+    if (tabContent) tabContent.classList.add('active');
+
+    // Save current screen tab to localStorage
+    localStorage.setItem('magion_current_screen_tab', `${screenId}-${tabName}`);
+}
+
+// Restore last viewed tab on page load
+function restoreLastTab() {
+    const lastTab = localStorage.getItem('magion_current_tab');
+    const lastScreenTab = localStorage.getItem('magion_current_screen_tab');
+
+    if (lastTab && lastTab !== 'global') {
+        const tabElement = document.getElementById('tab-' + lastTab);
+        if (tabElement) {
+            // Hide all tabs first
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            // Show saved tab
+            tabElement.classList.add('active');
+
+            // Restore screen sub-tab if exists
+            if (lastScreenTab) {
+                const [screenId, tabName] = lastScreenTab.split('-');
+                setTimeout(() => switchScreenTab(screenId, tabName), 100);
+            }
+        }
+    }
 }
 
 // Drag and Drop for Media Reordering
@@ -1735,10 +1791,58 @@ function toggleMedia(id, element) {
         });
 }
 
-function deleteMedia(id) {
-    if (confirm('Er du sikker på at du vil slette denne fil?')) {
-        window.location.href = `/delete/${id}`;
+async function deleteMedia(id) {
+    if (!confirm('Er du sikker på at du vil slette denne fil?')) {
+        return;
     }
+
+    try {
+        const response = await fetch(`/delete/${id}`);
+        if (response.ok) {
+            // Remove media card from DOM without page reload
+            const globalCard = document.getElementById('global-media-' + id);
+            if (globalCard) {
+                globalCard.remove();
+            }
+
+            // Remove from all screen grids
+            document.querySelectorAll(`[id*="media-${id}"]`).forEach(card => {
+                card.remove();
+            });
+
+            // Show success message
+            showToast('Fil slettet succesfuldt! 🗑️', 'success');
+        } else {
+            showToast('Fejl ved sletning af fil', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting media:', error);
+        showToast('Netværksfejl ved sletning', 'error');
+    }
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: ${type === 'success' ? '#48bb78' : '#f56565'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 function showQRCode(screenId) {
@@ -1986,6 +2090,9 @@ function bulkDeleteScreen(screenId) {
 
 // Drag and drop support
 document.addEventListener('DOMContentLoaded', function() {
+    // Restore last viewed tab
+    restoreLastTab();
+
     // Close screen menu when clicking outside
     document.addEventListener('click', function() {
         document.querySelectorAll('.screen-menu-dropdown').forEach(m => {
