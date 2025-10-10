@@ -133,6 +133,13 @@ class Screen(db.Model):
     carousel_enabled = db.Column(db.Boolean, default=False)  # Enable/disable sponsor carousel
     carousel_speed = db.Column(db.String(20), default='medium')  # 'slow', 'medium', 'fast'
 
+    # IP tracking and admin fields
+    last_access_ip = db.Column(db.String(50))  # WAN/Public IP (from X-Forwarded-For)
+    last_access_lan_ip = db.Column(db.String(50))  # LAN/Local IP (from remote_addr)
+    last_access_time = db.Column(db.DateTime)  # When was the screen last accessed
+    admin_notes = db.Column(db.Text)  # Internal notes/comments about this screen
+    custom_url = db.Column(db.Text)  # Custom URL field for reference
+
     # Relationship to media through association object
     media_associations = db.relationship('ScreenMedia', backref='screen', cascade='all, delete-orphan', order_by='ScreenMedia.order_index')
 
@@ -638,6 +645,28 @@ def api_screen_json_data(screen_uuid):
         logger.error(f"Error in JSON data endpoint: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/screen/<screen_uuid>/report-lan-ip', methods=['POST'])
+def report_lan_ip(screen_uuid):
+    """API endpoint for player devices to report their local LAN IP"""
+    try:
+        screen = Screen.query.filter_by(uuid=screen_uuid).first()
+        if not screen:
+            return jsonify({'error': 'Screen not found'}), 404
+
+        data = request.json
+        lan_ip = data.get('lan_ip')
+
+        if lan_ip:
+            screen.last_access_lan_ip = lan_ip
+            db.session.commit()
+            logger.info(f"Screen {screen.name} reported LAN IP: {lan_ip}")
+            return jsonify({'success': True, 'lan_ip': lan_ip})
+        else:
+            return jsonify({'error': 'No LAN IP provided'}), 400
+    except Exception as e:
+        logger.error(f"Error updating LAN IP for screen {screen_uuid}: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/redirect-check')
 def redirect_check():
     """API endpoint to check redirect status - used by display.html for periodic checks"""
@@ -867,6 +896,30 @@ def reorder_screen_media(screen_id):
 def display_screen(screen_uuid):
     """Display screen by UUID - shows screen-specific content"""
     screen = Screen.query.filter_by(uuid=str(screen_uuid)).first_or_404()
+
+    # Track IP address and last access time
+    try:
+        # Get WAN IP (from proxy/X-Forwarded-For)
+        wan_ip = request.headers.get('X-Forwarded-For')
+        if wan_ip and ',' in wan_ip:
+            # X-Forwarded-For can contain multiple IPs, take the first one
+            wan_ip = wan_ip.split(',')[0].strip()
+
+        # Get LAN IP (from X-Real-IP header set by nginx proxy)
+        # Falls back to request.remote_addr if header not present
+        lan_ip = request.headers.get('X-Real-IP') or request.remote_addr
+
+        # Update screen access info
+        screen.last_access_ip = wan_ip if wan_ip else lan_ip  # WAN IP (or LAN if no proxy)
+        screen.last_access_lan_ip = lan_ip  # Always save LAN IP
+        screen.last_access_time = datetime.utcnow()
+        db.session.commit()
+
+        logger.info(f"Screen {screen.name} accessed - WAN: {wan_ip or 'N/A'}, LAN: {lan_ip}")
+    except Exception as e:
+        logger.warning(f"Failed to update screen access info: {e}")
+        # Don't fail the request if IP tracking fails
+        db.session.rollback()
 
     # Check display mode and handle accordingly
     display_mode = screen.display_mode or 'media'
@@ -1142,12 +1195,14 @@ def update_screen_settings(screen_id):
 @app.route('/screen/<int:screen_id>/edit', methods=['POST'])
 @login_required
 def edit_screen(screen_id):
-    """Edit screen name, location and description"""
+    """Edit screen name, location, description, admin notes and custom URL"""
     screen = Screen.query.get_or_404(screen_id)
 
     screen.name = request.form.get('name', screen.name)
     screen.location = request.form.get('location', '')
     screen.description = request.form.get('description', '')
+    screen.admin_notes = request.form.get('admin_notes', '')
+    screen.custom_url = request.form.get('custom_url', '')
 
     db.session.commit()
 
@@ -1396,6 +1451,27 @@ def init_db():
                 if 'carousel_speed' not in screen_columns:
                     conn.execute(text("ALTER TABLE screen ADD COLUMN carousel_speed VARCHAR(20) DEFAULT 'medium'"))
                     logger.info("Added carousel_speed column to screen table")
+
+                # IP tracking and admin fields
+                if 'last_access_ip' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN last_access_ip VARCHAR(50)"))
+                    logger.info("Added last_access_ip column to screen table")
+
+                if 'last_access_lan_ip' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN last_access_lan_ip VARCHAR(50)"))
+                    logger.info("Added last_access_lan_ip column to screen table")
+
+                if 'last_access_time' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN last_access_time DATETIME"))
+                    logger.info("Added last_access_time column to screen table")
+
+                if 'admin_notes' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN admin_notes TEXT"))
+                    logger.info("Added admin_notes column to screen table")
+
+                if 'custom_url' not in screen_columns:
+                    conn.execute(text("ALTER TABLE screen ADD COLUMN custom_url TEXT"))
+                    logger.info("Added custom_url column to screen table")
 
                 conn.commit()
         except Exception as e:
