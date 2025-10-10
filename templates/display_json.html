@@ -1158,6 +1158,7 @@
             carousel_sponsors_count: {{ carousel_sponsors|length if carousel_sponsors else 0 }}
         };
 
+        // Settings check (template changes, carousel changes, etc.)
         setInterval(() => {
             // Skip check if offline
             if (!navigator.onLine) {
@@ -1199,6 +1200,107 @@
                     console.error('Error checking settings (kan være offline):', error);
                 });
         }, 15000); // Check every 15 seconds
+
+        // ========== SMART JSON DATA POLLING ==========
+        let pollingInterval = 30000; // Start with 30 seconds
+        const BASE_POLLING_INTERVAL = 30000;
+        const MAX_POLLING_INTERVAL = 120000; // Max 2 minutes
+        let consecutiveErrors = 0;
+        let lastDataFetchTime = Date.now();
+        let pollingTimeout = null;
+
+        function fetchFreshJsonData() {
+            // Skip if offline
+            if (!navigator.onLine) {
+                console.log('⏭️ Skipping JSON data fetch - offline');
+                scheduleNextFetch();
+                return;
+            }
+
+            console.log('🔄 Fetching fresh JSON data...');
+            const fetchStartTime = Date.now();
+
+            fetch(`/api/screen/${screenUuid}/json-data`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success && result.data) {
+                        // Success - reset error counter and polling interval
+                        consecutiveErrors = 0;
+                        pollingInterval = BASE_POLLING_INTERVAL;
+
+                        const fetchTime = Date.now() - fetchStartTime;
+                        lastDataFetchTime = Date.now();
+
+                        console.log(`✅ JSON data fetched successfully (${fetchTime}ms)`);
+
+                        // Update raw data
+                        const newData = result.data;
+
+                        // Check if data has changed
+                        const oldDataString = JSON.stringify(rawJsonData);
+                        const newDataString = JSON.stringify(newData);
+
+                        if (oldDataString !== newDataString) {
+                            console.log('📦 Data has changed - updating display');
+                            rawJsonData = newData;
+                            cacheJsonData(newData);
+                            displayActivities(true); // Force re-render
+
+                            // Hide offline indicator if showing
+                            hideOfflineIndicator();
+                        } else {
+                            console.log('⏭️ Data unchanged - skipping re-render');
+                        }
+                    } else {
+                        throw new Error(result.error || 'Invalid response format');
+                    }
+
+                    scheduleNextFetch();
+                })
+                .catch(error => {
+                    consecutiveErrors++;
+
+                    // Exponential backoff
+                    pollingInterval = Math.min(
+                        BASE_POLLING_INTERVAL * Math.pow(2, consecutiveErrors - 1),
+                        MAX_POLLING_INTERVAL
+                    );
+
+                    console.error(`❌ JSON data fetch failed (attempt ${consecutiveErrors}):`, error.message);
+                    console.log(`⏰ Next retry in ${pollingInterval / 1000}s (exponential backoff)`);
+
+                    // Show offline indicator after 3 consecutive errors
+                    if (consecutiveErrors >= 3) {
+                        showOfflineIndicator();
+                    }
+
+                    scheduleNextFetch();
+                });
+        }
+
+        function scheduleNextFetch() {
+            // Clear any existing timeout
+            if (pollingTimeout) {
+                clearTimeout(pollingTimeout);
+            }
+
+            // Add random offset (0-5 seconds) to prevent synchronized requests
+            const randomOffset = Math.floor(Math.random() * 5000);
+            const nextFetchIn = pollingInterval + randomOffset;
+
+            pollingTimeout = setTimeout(fetchFreshJsonData, nextFetchIn);
+        }
+
+        // Start polling after initial render (wait 30 seconds for first fetch)
+        setTimeout(() => {
+            console.log('🚀 Starting JSON data polling (interval: 30s)');
+            fetchFreshJsonData();
+        }, 30000);
 
         // Initialize
         updateDateTime();

@@ -600,6 +600,44 @@ def api_screen_settings(screen_uuid):
         logger.error(f"Error getting screen settings: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/screen/<screen_uuid>/json-data')
+def api_screen_json_data(screen_uuid):
+    """API endpoint for JSON data - used by display_json.html for periodic data refresh"""
+    try:
+        screen = Screen.query.filter_by(uuid=screen_uuid).first()
+        if not screen:
+            return jsonify({'error': 'Screen not found'}), 404
+
+        if not screen.json_api_url:
+            return jsonify({'error': 'No JSON API URL configured'}), 400
+
+        # Fetch fresh JSON data from external API
+        try:
+            response = requests.get(screen.json_api_url, timeout=10)
+            if response.status_code == 200:
+                json_data = response.json()
+                return jsonify({
+                    'success': True,
+                    'data': json_data,
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            else:
+                logger.error(f"JSON API returned status {response.status_code}")
+                return jsonify({
+                    'success': False,
+                    'error': f'API returned status {response.status_code}'
+                }), response.status_code
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch JSON API: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Network error fetching JSON data',
+                'details': str(e)
+            }), 503
+    except Exception as e:
+        logger.error(f"Error in JSON data endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/redirect-check')
 def redirect_check():
     """API endpoint to check redirect status - used by display.html for periodic checks"""
