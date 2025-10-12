@@ -182,7 +182,7 @@
                     }
                 })
                 .catch(error => console.log('Check failed:', error));
-        }, 30000);
+        }, 600000); // Check every 10 minutes (600000ms)
 
         // Optional: Listen for visibility change to refresh when screen becomes visible
         document.addEventListener('visibilitychange', () => {
@@ -206,7 +206,7 @@
                 .catch(error => {
                     console.error('Error checking settings:', error);
                 });
-        }, 15000); // Check every 15 seconds
+        }, 300000); // Check every 5 minutes (300000ms)
     </script>
 </body>
 </html>

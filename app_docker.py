@@ -1405,6 +1405,17 @@ def init_db():
     with app.app_context():
         db.create_all()
 
+        # Enable WAL mode for better concurrency and performance
+        try:
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                result = conn.execute(text("PRAGMA journal_mode=WAL;"))
+                mode = result.scalar()
+                conn.commit()
+                logger.info(f"SQLite journal mode: {mode}")
+        except Exception as e:
+            logger.warning(f"Failed to enable WAL mode: {e}")
+
         # Add new columns to Screen table if they don't exist (migration)
         try:
             from sqlalchemy import inspect, text
@@ -1558,6 +1569,10 @@ def import_existing_media():
         
         db.session.commit()
         logger.info("Import complete!")
+
+# Initialize database when module is loaded (for Gunicorn and other WSGI servers)
+# This ensures database is ready even when not running via python app.py
+init_db()
 
 if __name__ == '__main__':
     init_db()

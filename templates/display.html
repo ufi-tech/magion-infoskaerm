@@ -596,7 +596,7 @@
             }
         });
 
-        // Check for redirect override periodically (every 30 seconds)
+        // Check for redirect override periodically (every 10 minutes)
         setInterval(() => {
             fetch('/api/redirect-check')
                 .then(response => response.json())
@@ -610,7 +610,7 @@
                     console.error('Redirect check fejlede (kan være offline):', error);
                     // Don't show error if we're just offline
                 });
-        }, 30000); // Check every 30 seconds
+        }, 600000); // Check every 10 minutes (600000ms)
 
         // Check for media list updates periodically
         {% if screen_uuid %}
@@ -682,7 +682,7 @@
                 .catch(error => {
                     console.error('Error checking settings (kan være offline):', error);
                 });
-        }, 15000); // Check every 15 seconds
+        }, 300000); // Check every 5 minutes (300000ms)
         {% endif %}
     </script>
 </body>

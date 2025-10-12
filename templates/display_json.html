@@ -1199,7 +1199,7 @@
                 .catch(error => {
                     console.error('Error checking settings (kan være offline):', error);
                 });
-        }, 15000); // Check every 15 seconds
+        }, 300000); // Check every 5 minutes (300000ms)
 
         // ========== SMART JSON DATA POLLING ==========
         let pollingInterval = 30000; // Start with 30 seconds

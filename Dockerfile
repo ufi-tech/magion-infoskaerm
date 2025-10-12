@@ -56,5 +56,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 45764 45765
 
-# Start command
-CMD ["python", "app.py"]
+# Start command - Use Gunicorn production server
+# --bind 0.0.0.0:45765 = Listen on all interfaces on port 45765
+# --workers 4 = Use 4 worker processes for handling requests
+# --timeout 120 = Request timeout of 120 seconds
+# --access-logfile - = Log access to stdout
+# --error-logfile - = Log errors to stdout
+CMD ["gunicorn", "--bind", "0.0.0.0:45765", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
